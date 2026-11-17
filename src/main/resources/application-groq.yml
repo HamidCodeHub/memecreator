@@ -1,0 +1,12 @@
+# Call Groq directly instead of the aiproxy gateway.
+# Activate with: --spring.profiles.active=groq   (or SPRING_PROFILES_ACTIVE=groq)
+ai-gateway:
+  base-url: https://api.groq.com/openai
+  chat-path: /v1/chat/completions
+  api-key: ${GROQ_API_KEY}
+  model: openai/gpt-oss-120b
+  temperature: 1.0          # gpt-oss is tuned for temperature 1.0; it also helps the jokes vary
+  max-tokens: 2000          # reasoning + answer share this budget
+  reasoning-effort: low     # low = fast; medium/high rarely makes captions funnier
+  json-mode: true
+  read-timeout: 60s

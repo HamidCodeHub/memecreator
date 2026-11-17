@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Meme Creator</title>
+    <style>
+        :root { color-scheme: light dark; --accent: #e8a33d; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: system-ui, sans-serif; background: #141414; color: #eee; }
+        main { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
+        h1 { margin: 0 0 4px; font-size: 28px; }
+        p.sub { margin: 0 0 24px; color: #999; }
+        form { display: flex; gap: 10px; flex-wrap: wrap; }
+        input[type=text] { flex: 1 1 320px; padding: 12px 14px; font-size: 16px; border-radius: 8px;
+            border: 1px solid #444; background: #1f1f1f; color: inherit; }
+        select, button { padding: 12px 14px; font-size: 15px; border-radius: 8px; border: 1px solid #444;
+            background: #1f1f1f; color: inherit; }
+        button { background: var(--accent); color: #111; border: none; font-weight: 600; cursor: pointer; }
+        button:disabled { opacity: .5; cursor: wait; }
+        #status { margin: 16px 0; min-height: 1.4em; color: #bbb; }
+        #status.error { color: #ff7b72; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+        figure { margin: 0; background: #1f1f1f; border-radius: 10px; overflow: hidden; }
+        figure img { width: 100%; display: block; }
+        figcaption { padding: 8px 10px; font-size: 13px; color: #aaa; display: flex; justify-content: space-between; }
+        figcaption a { color: var(--accent); text-decoration: none; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Meme Creator</h1>
+    <p class="sub">Type a topic — the AI picks templates and writes the captions.</p>
+
+    <form id="form">
+        <input id="topic" type="text" placeholder="e.g. deploying to production on a Friday" maxlength="300" required>
+        <input id="language" type="text" placeholder="English" maxlength="40" style="flex:0 1 140px" title="Caption language (optional)">
+        <select id="strategy">
+            <option value="AI_PICK">AI picks templates</option>
+            <option value="RANDOM">Random templates</option>
+        </select>
+        <button id="go" type="submit">Make memes</button>
+    </form>
+
+    <div id="status"></div>
+    <div id="grid" class="grid"></div>
+</main>
+
+<script>
+    const form = document.getElementById('form');
+    const statusEl = document.getElementById('status');
+    const grid = document.getElementById('grid');
+    const button = document.getElementById('go');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const topic = document.getElementById('topic').value.trim();
+        if (!topic) return;
+        button.disabled = true;
+        statusEl.className = '';
+        statusEl.textContent = 'Asking the AI for something funny…';
+        grid.innerHTML = '';
+        try {
+            const res = await fetch('/api/memes', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    topic,
+                    strategy: document.getElementById('strategy').value,
+                    language: document.getElementById('language').value.trim() || null
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || data.title || res.statusText);
+            statusEl.textContent = `Saved to ${data.folder}`;
+            for (const m of data.memes) {
+                const fig = document.createElement('figure');
+                const img = document.createElement('img');
+                img.src = m.url;
+                img.alt = `${m.template}: ${m.texts.join(' / ')}`;
+                const cap = document.createElement('figcaption');
+                const name = document.createElement('span');
+                name.textContent = m.template;
+                const link = document.createElement('a');
+                link.href = m.url;
+                link.download = '';
+                link.textContent = 'Download';
+                cap.append(name, link);
+                fig.append(img, cap);
+                grid.append(fig);
+            }
+        } catch (err) {
+            statusEl.className = 'error';
+            statusEl.textContent = err.message;
+        } finally {
+            button.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
