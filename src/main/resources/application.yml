@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: memecreator
+  servlet:
+    multipart:
+      max-file-size: 10MB          # photo uploads (POST /api/memes/from-image)
+      max-request-size: 11MB
 
 meme:
   templates-dir: E:/photos/meme
@@ -35,6 +39,14 @@ ai-gateway:
     groq:
       "[reasoning_effort]": low        # brackets keep the underscore in the key
   json-mode: true                      # send response_format json_object (model needs the json_mode capability)
+  # Photo memes need a model that can read images. Groq's free vision model; copy the exact id from the Groq
+  # console if it changes. It has its own rate limits, separate from the text model.
+  vision-model: ${AI_GATEWAY_VISION_MODEL:groq/qwen/qwen3.8-27b}
+  vision-max-tokens: 3000              # Qwen may "think" before answering; thinking + answer share this budget
+  image-format: aiproxy                # aiproxy's image message format; "openai" when calling Groq directly
+  # vision-provider-options:           # e.g. to turn Qwen's thinking off if it runs out of tokens:
+  #   groq:
+  #     "[reasoning_effort]": none
   connect-timeout: 5s
   read-timeout: 90s
 

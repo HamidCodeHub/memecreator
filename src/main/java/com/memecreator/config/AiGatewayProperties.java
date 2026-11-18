@@ -28,6 +28,18 @@ public record AiGatewayProperties(
          * Optional raw provider-specific fields, sent as "provider_options" (aiproxy merges them into the
          * call to that provider), e.g. groq -> reasoning_effort: low.
          */
-        Map<String, Map<String, String>> providerOptions
+        Map<String, Map<String, String>> providerOptions,
+        /** Model that can read images, used for photo memes, e.g. groq/qwen/qwen3.8-27b. */
+        String visionModel,
+        @DefaultValue("1500") int visionMaxTokens,
+        /** Like provider-options, but only for vision-model calls. */
+        Map<String, Map<String, String>> visionProviderOptions,
+        /**
+         * How images are put in a message: AIPROXY = {"type":"image","url":"data:..."} (aiproxy's format),
+         * OPENAI = {"type":"image_url","image_url":{"url":"data:..."}} (calling an OpenAI-style API directly).
+         */
+        @DefaultValue("AIPROXY") ImageFormat imageFormat
 ) {
+
+    public enum ImageFormat { AIPROXY, OPENAI }
 }

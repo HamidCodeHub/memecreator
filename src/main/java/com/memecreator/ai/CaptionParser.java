@@ -53,10 +53,12 @@ public final class CaptionParser {
         return List.of(text(item, "top", "top_text", "topText"), text(item, "bottom", "bottom_text", "bottomText"));
     }
 
-    static String extractJson(String reply) {
+    public static String extractJson(String reply) {
         if (reply == null) {
             return "";
         }
+        // some reasoning models (e.g. Qwen) put their thinking in <think>...</think> before the answer
+        reply = reply.replaceAll("(?s)<think>.*?</think>", "");
         int obj = reply.indexOf('{');
         int arr = reply.indexOf('[');
         int start = obj < 0 ? arr : (arr < 0 ? obj : Math.min(obj, arr));
@@ -68,7 +70,7 @@ public final class CaptionParser {
         return end > start ? reply.substring(start, end + 1) : reply.substring(start);
     }
 
-    static String preview(String reply) {
+    public static String preview(String reply) {
         if (reply == null) {
             return "<null>";
         }

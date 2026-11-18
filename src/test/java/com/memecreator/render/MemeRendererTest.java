@@ -54,6 +54,19 @@ class MemeRendererTest {
         assertThat(preview).isNotEmpty();
     }
 
+    @Test
+    void captionBarAddsWhiteSpaceAboveThePhoto() {
+        BufferedImage photo = filled(600, 400, Color.BLUE);
+
+        BufferedImage out = renderer.renderCaptionBar(photo, "me when the build passes on the first try");
+
+        assertThat(out.getWidth()).isEqualTo(600);
+        assertThat(out.getHeight()).isGreaterThan(400);
+        int bar = out.getHeight() - 400;
+        assertThat(out.getRGB(1, 1)).isEqualTo(Color.WHITE.getRGB());
+        assertThat(out.getRGB(300, bar + 200)).isEqualTo(Color.BLUE.getRGB());   // photo is not covered
+    }
+
     private static BufferedImage filled(int w, int h, Color c) {
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
         var g = img.createGraphics();

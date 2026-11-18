@@ -33,6 +33,7 @@ Swagger UI: http://localhost:8081/swagger-ui.html (OpenAPI JSON at `/v3/api-docs
 |---|---|---|
 | POST | `/api/memes` | Body: `{"topic":"...", "language":"English", "strategy":"AI_PICK" \| "RANDOM", "templates":["Drake Hotline Bling", ...]}` — only `topic` is required |
 | GET | `/api/memes?topic=...&language=Italian&strategy=RANDOM&templates=Two Buttons,This Is Fine` | Same thing via query string |
+| POST | `/api/memes/from-image` | Memes from **your own photo** (multipart form, see below) |
 | GET | `/api/templates` | Lists the templates with their text boxes |
 | GET | `/api/templates/preview?name=Drake Hotline Bling` | PNG of the template with its text boxes outlined and numbered |
 | POST | `/api/memes/render` | `{"template":"Drake Hotline Bling","texts":["...","..."]}` — render your own texts, no AI call |
@@ -90,6 +91,28 @@ It reads the reply text from `choices[0].message.content`, and also accepts Anth
 `content[].text` or a plain `output_text` / `text` field. If your gateway uses another path,
 change `ai-gateway.chat-path` in `application.yml`.
 
+## Memes from your own photo
+
+```bat
+curl -F "image=@C:\photos\boss.jpg" -F "count=4" -F "elaboration=NORMAL" http://localhost:8081/api/memes/from-image
+```
+
+| Field | Required | Default | Meaning |
+|---|---|---|---|
+| `image` | yes | | JPEG or PNG (GIF/BMP also work), up to 10 MB |
+| `topic` | no | | steer the joke; leave it out and the AI decides what is funny about the photo |
+| `language` | no | English | caption language |
+| `count` | no | 4 | how many memes from the photo (1-8) |
+| `elaboration` | no | NORMAL | `NORMAL` = **1 AI call** (the vision model reads the photo and writes the captions); `HIGH` = **2 AI calls** (the vision model describes the photo in detail, then the text model writes the captions; usually funnier) |
+
+The AI picks a caption style per meme: `TOP_BOTTOM`, `TOP`, `BOTTOM` (white outlined text over the photo) or
+`CAPTION_BAR` (a white bar with black text added above the photo, so faces are never covered). The response
+includes `analysis` (what the AI saw), `aiCalls`, and the URL of every meme. The photo is shrunk to 1024 px
+before it is sent to the AI, which keeps the request inside Groq's limits.
+
+Needs a vision model: `ai-gateway.vision-model` (default `groq/qwen/qwen3.8-27b`, override with
+`AI_GATEWAY_VISION_MODEL`). On Groq's free plan it has its own rate limits, separate from the text model.
+
 ## Text boxes per template (`src/main/resources/template-layouts.yml`)
 
 Each template can define where its captions go and what each one means, e.g. Drake's two texts sit in the
@@ -119,7 +142,7 @@ layouts:
 | `meme.default-language` | `English` (used when a request has no `language`) |
 | `meme.layouts-file` | `classpath:template-layouts.yml` (or `file:E:/.../layouts.yml`) |
 | `meme.fonts` | `Impact, Anton, Arial Black, Arial` (first installed wins; non-Latin text such as Persian falls back to a font that has the glyphs) |
-| `ai-gateway.*` | see file |
+| `ai-gateway.*` | see file; `vision-model`, `vision-max-tokens`, `image-format` are for photo memes |
 
 Template files are expected as `<id>_<Name>.jpg|png`; the name after the underscore is what
 the AI sees. Drop new images into the folder at any time — it's re-scanned automatically.

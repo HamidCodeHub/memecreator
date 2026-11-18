@@ -32,22 +32,56 @@ public class AiGatewayClient {
         this.props = props;
     }
 
+    /** Text-only call with the text model (ai-gateway.model). */
     public String chat(String systemPrompt, String userPrompt) {
+        return send(props.model(), props.maxTokens(), props.reasoningEffort(), props.providerOptions(),
+                systemPrompt, userPrompt, "ai-gateway.max-tokens");
+    }
+
+    /**
+     * Call with an image, using the vision model (ai-gateway.vision-model).
+     *
+     * @param imageDataUri the image as {@code data:image/jpeg;base64,...}
+     */
+    public String chatWithImage(String systemPrompt, String userPrompt, String imageDataUri) {
+        if (!StringUtils.hasText(props.visionModel())) {
+            throw new IllegalStateException("No vision model configured: set ai-gateway.vision-model "
+                    + "(a model that can read images, e.g. groq/qwen/qwen3.8-27b)");
+        }
+        Map<String, Object> image = new LinkedHashMap<>();
+        if (props.imageFormat() == AiGatewayProperties.ImageFormat.OPENAI) {
+            image.put("type", "image_url");
+            image.put("image_url", Map.of("url", imageDataUri));
+        } else {
+            image.put("type", "image");
+            image.put("url", imageDataUri);
+        }
+        Map<String, Object> text = new LinkedHashMap<>();
+        text.put("type", "text");
+        text.put("text", userPrompt);
+        List<Map<String, Object>> content = List.of(text, image);
+        return send(props.visionModel(), props.visionMaxTokens(), null, props.visionProviderOptions(),
+                systemPrompt, content, "ai-gateway.vision-max-tokens");
+    }
+
+    private String send(String model, int maxTokens, String reasoningEffort,
+                        Map<String, Map<String, String>> providerOptions,
+                        String systemPrompt, Object userContent, String maxTokensProperty) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", props.model());
+        body.put("model", model);
         body.put("temperature", props.temperature());
-        body.put("max_tokens", props.maxTokens());
+        body.put("max_tokens", maxTokens);
         body.put("messages", List.of(
                 Map.of("role", "system", "content", systemPrompt),
-                Map.of("role", "user", "content", userPrompt)));
-        if (StringUtils.hasText(props.reasoningEffort())) {
-            body.put("reasoning_effort", props.reasoningEffort());
+                Map.of("role", "user", "content", userContent)));
+        if (StringUtils.hasText(reasoningEffort)) {
+            body.put("reasoning_effort", reasoningEffort);
         }
         if (props.jsonMode()) {
             body.put("response_format", Map.of("type", "json_object"));
         }
-        if (props.providerOptions() != null && !props.providerOptions().isEmpty()) {
-            body.put("provider_options", props.providerOptions());
+        if (providerOptions != null && !providerOptions.isEmpty()) {
+            body.put("provider_options", providerOptions);
         }
 
         long start = System.currentTimeMillis();
@@ -65,14 +99,14 @@ public class AiGatewayClient {
             throw new AiGatewayException("Could not reach AI gateway at " + props.baseUrl() + props.chatPath()
                     + " (" + e.getMessage() + ")", e);
         }
-        logUsage(response, System.currentTimeMillis() - start);
+        logUsage(model, response, System.currentTimeMillis() - start);
 
         String text = extractText(response);
         if (text == null || text.isBlank()) {
             String finish = response == null ? null : response.path("choices").path(0).path("finish_reason").asText(null);
             if ("length".equals(finish)) {
                 throw new AiGatewayException("The model ran out of tokens before answering (finish_reason=length). "
-                        + "Increase ai-gateway.max-tokens or lower ai-gateway.reasoning-effort.");
+                        + "Increase " + maxTokensProperty + " or lower the reasoning effort.");
             }
             throw new AiGatewayException("AI gateway response had no text: " + response);
         }
@@ -93,14 +127,14 @@ public class AiGatewayClient {
     }
 
     /** Logs the token usage the gateway reports in the standard "usage" block, if present. */
-    private void logUsage(JsonNode response, long millis) {
+    private void logUsage(String requested, JsonNode response, long millis) {
         JsonNode usage = response == null ? null : response.path("usage");
-        String model = response == null ? props.model() : response.path("model").asText(props.model());
-        boolean sameModel = model.equals(props.model()) || model.endsWith("/" + props.model())
-                || props.model().endsWith("/" + model);
+        String model = response == null ? requested : response.path("model").asText(requested);
+        boolean sameModel = model.equals(requested) || model.endsWith("/" + requested)
+                || requested.endsWith("/" + model);
         if (!sameModel && response != null) {
             log.warn("Requested model '{}' but the gateway answered with '{}'. Gateway routing trace:",
-                    props.model(), model);
+                    requested, model);
             logRoutingTrace(response.path("routing"));
         }
         if (usage != null && usage.isObject()) {

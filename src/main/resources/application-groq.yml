@@ -9,4 +9,6 @@ ai-gateway:
   max-tokens: 2000          # reasoning + answer share this budget
   reasoning-effort: low     # low = fast; medium/high rarely makes captions funnier
   json-mode: true
+  vision-model: qwen/qwen3.8-27b
+  image-format: openai      # Groq expects {"type":"image_url","image_url":{"url":...}}
   read-timeout: 60s

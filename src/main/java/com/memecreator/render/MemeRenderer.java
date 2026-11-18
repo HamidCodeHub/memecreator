@@ -45,6 +45,7 @@ public class MemeRenderer {
     private static final int MIN_FONT_SIZE = 10;
 
     private final Font baseFont;
+    private final Font barFont;
     private final float jpegQuality;
 
     @Autowired
@@ -54,6 +55,7 @@ public class MemeRenderer {
 
     MemeRenderer(List<String> preferredFonts, float jpegQuality) {
         this.baseFont = pickFont(preferredFonts);
+        this.barFont = pickPlainFont(List.of("Arial", "Helvetica", "Segoe UI", "Liberation Sans", "DejaVu Sans"));
         this.jpegQuality = jpegQuality;
     }
 
@@ -78,6 +80,64 @@ public class MemeRenderer {
 
     public void render(Path template, List<TextBox> boxes, List<String> texts, Path target) throws IOException {
         writeJpeg(render(read(template), boxes, texts), target);
+    }
+
+    /**
+     * Modern caption style: a white bar is added above the picture with the text in black, left-aligned and not
+     * upper-cased ("me when ..."). The picture itself is not covered.
+     */
+    public BufferedImage renderCaptionBar(BufferedImage source, String text) {
+        int w = source.getWidth();
+        String caption = text == null ? "" : text.strip();
+        int pad = Math.max(8, Math.round(w * 0.04f));
+        int availW = w - 2 * pad;
+
+        // font size relative to the width; shrink while the caption needs more than 4 lines
+        Font family = fontFor(barFont, caption);
+        int size = Math.max(MIN_FONT_SIZE + 4, Math.round(w / 16f));
+        Font font;
+        FontMetrics fm;
+        List<String> lines;
+        BufferedImage probe = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        Graphics2D pg = graphics(probe);
+        try {
+            while (true) {
+                font = family.deriveFont((float) size);
+                fm = pg.getFontMetrics(font);
+                lines = caption.isEmpty() ? List.of() : wrap(caption, fm, availW);
+                if ((lines.size() <= 4 && longestWord(caption, fm) <= availW) || size <= MIN_FONT_SIZE + 4) {
+                    break;
+                }
+                size -= Math.max(1, size / 12);
+            }
+        } finally {
+            pg.dispose();
+        }
+
+        int lh = Math.round((fm.getAscent() + fm.getDescent()) * 1.15f);
+        int barH = lines.isEmpty() ? 0 : lines.size() * lh + 2 * pad - (lh - fm.getAscent() - fm.getDescent());
+        BufferedImage out = new BufferedImage(w, barH + source.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = graphics(out);
+        try {
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, w, out.getHeight());
+            g.drawImage(source, 0, barH, null);
+            g.setColor(Color.BLACK);
+            int baseline = pad + fm.getAscent();
+            for (String line : lines) {
+                TextLayout layout = new TextLayout(line, font, g.getFontRenderContext());
+                g.fill(layout.getOutline(AffineTransform.getTranslateInstance(pad, baseline)));
+                baseline += lh;
+            }
+        } finally {
+            g.dispose();
+        }
+        return out;
+    }
+
+    /** Saves an image as JPEG with the configured quality. */
+    public void write(BufferedImage image, Path target) throws IOException {
+        writeJpeg(image, target);
     }
 
     /** The template with every box outlined and labeled "#n hint", to check a layout. Returns PNG bytes. */
@@ -250,10 +310,14 @@ public class MemeRenderer {
 
     /** Falls back to the logical SansSerif font (which has glyph fallback) for non-Latin text. */
     private Font fontFor(String text) {
-        if (baseFont.canDisplayUpTo(text) == -1) {
-            return baseFont;
+        return fontFor(baseFont, text);
+    }
+
+    private static Font fontFor(Font preferred, String text) {
+        if (preferred.canDisplayUpTo(text) == -1) {
+            return preferred;
         }
-        return new Font(Font.SANS_SERIF, Font.BOLD, baseFont.getSize());
+        return new Font(Font.SANS_SERIF, preferred.getStyle(), preferred.getSize());
     }
 
     private static Font pickFont(List<String> preferred) {
@@ -267,6 +331,18 @@ public class MemeRenderer {
             }
         }
         return new Font(Font.SANS_SERIF, Font.BOLD, 48);
+    }
+
+    /** Regular-weight font for the caption bar (the classic meme font looks wrong there). */
+    private static Font pickPlainFont(List<String> preferred) {
+        Set<String> installed = new HashSet<>(Arrays.asList(
+                GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames(Locale.ROOT)));
+        for (String name : preferred) {
+            if (installed.contains(name)) {
+                return new Font(name, Font.PLAIN, 48);
+            }
+        }
+        return new Font(Font.SANS_SERIF, Font.PLAIN, 48);
     }
 
     public String fontName() {
