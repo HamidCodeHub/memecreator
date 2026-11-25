@@ -1,0 +1,29 @@
+# Caddy inside the stack: serves the React app and forwards backend paths to memecreator.
+# HTTPS ends at Cloudflare; cloudflared reaches Caddy over the private Docker network on port 80.
+{
+	auto_https off
+	admin off
+	servers {
+		trusted_proxies static private_ranges   # keep cloudflared's X-Forwarded-Proto: https
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	# Same paths the Vite dev server forwards (memecreator-fe/vite.config.ts)
+	@backend path /api/* /oauth2/* /login /login/* /generated/* /s/*
+	handle @backend {
+		reverse_proxy memecreator:8081
+	}
+
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages path / /index.html
+		header @pages Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -38,7 +38,8 @@ public class PhotoCaptionWriter {
     private static final String RULES = """
             Rules:
             - Write exactly %d memes. Make them different: different jokes and angles, and vary the styles.
-            - Choose the style by where the photo has empty space; don't put text over faces.
+            - Choose the style by where the photo has empty space; don't put text over faces. When a face or the
+              main subject fills the top of the photo, prefer CAPTION_BAR or BOTTOM.
             - Keep texts short: at most about 8 words per text for TOP_BOTTOM/TOP/BOTTOM, 15 for CAPTION_BAR.
             - Write the texts in %s.""";
 
@@ -48,7 +49,13 @@ public class PhotoCaptionWriter {
     private static final String ANALYSIS_SHAPE =
             "\"analysis\":{\"description\":\"<what is in the photo, 1-2 sentences>\",\"vibe\":\"<the mood>\","
                     + "\"funny_angles\":[\"<angle 1>\",\"<angle 2>\",\"<angle 3>\"],"
-                    + "\"empty_areas\":\"<where text fits without covering faces>\"}";
+                    + "\"empty_areas\":\"<where text fits without covering faces>\","
+                    + "\"keep_clear\":[[<ymin>,<xmin>,<ymax>,<xmax>]]}";
+
+    private static final String KEEP_CLEAR_RULE = """
+            "keep_clear" lists boxes captions must not cover: every face or head in the photo (people, animals,
+            statues, drawings), including hair, hats and glasses, plus any small detail the jokes depend on. Each box
+            is [ymin, xmin, ymax, xmax] on a 0-1000 scale of the photo. Not whole bodies or backgrounds. [] if none.""";
 
     private final AiGatewayClient client;
     private final ObjectMapper mapper;
@@ -79,9 +86,11 @@ public class PhotoCaptionWriter {
 
                 %s
 
+                %s
+
                 Respond with JSON exactly in this shape:
                 {%s,%s}
-                """.formatted(topicLine(topic), count, STYLES, RULES.formatted(count, language),
+                """.formatted(topicLine(topic), count, STYLES, RULES.formatted(count, language), KEEP_CLEAR_RULE,
                 ANALYSIS_SHAPE, MEMES_SHAPE);
         PhotoPlan plan = PhotoPlanParser.parse(client.chatWithImage(WRITER_SYSTEM, prompt, imageDataUri), mapper);
         return new Result(requireCaptions(plan), 1);
@@ -93,15 +102,18 @@ public class PhotoCaptionWriter {
                 Describe this photo for a meme writer who will not see it.
                 %s
                 Give at least 5 different funny angles (what is ironic, relatable, exaggerated or absurd about it).
+                %s
 
                 Respond with JSON exactly in this shape:
                 {%s}
                 """.formatted(topic == null || topic.isBlank() ? ""
                         : "The memes will be about this topic, so note anything in the photo that connects to it: " + topic,
+                KEEP_CLEAR_RULE,
                 ANALYSIS_SHAPE.replace("<angle 3>\"]", "<angle 3>\",\"<angle 4>\",\"<angle 5>\"]")
                         .replace("1-2 sentences", "3-5 sentences: people, expressions, body language, situation"));
-        PhotoPlan.Analysis analysis = PhotoPlanParser.parse(
-                client.chatWithImage(DESCRIBER_SYSTEM, describe, imageDataUri), mapper).analysis();
+        PhotoPlan described = PhotoPlanParser.parse(
+                client.chatWithImage(DESCRIBER_SYSTEM, describe, imageDataUri), mapper);
+        PhotoPlan.Analysis analysis = described.analysis();
         if (analysis.description().isEmpty()) {
             throw new AiGatewayException("The vision model did not describe the photo");
         }
@@ -123,7 +135,7 @@ public class PhotoCaptionWriter {
                 """.formatted(describeForWriter(analysis), topicLine(topic), count, STYLES,
                 RULES.formatted(count, language), MEMES_SHAPE);
         PhotoPlan captions = PhotoPlanParser.parse(client.chat(WRITER_SYSTEM, write), mapper);
-        return new Result(requireCaptions(new PhotoPlan(analysis, captions.captions())), 2);
+        return new Result(requireCaptions(new PhotoPlan(analysis, captions.captions(), described.keepClear())), 2);
     }
 
     private static String topicLine(String topic) {

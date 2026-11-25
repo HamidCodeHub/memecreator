@@ -1,8 +1,13 @@
 target/
 output/
+private/
 .idea/
 *.iml
 .vscode/
 .classpath
 .project
 .settings/
+data/
+config/
+deploy/.env
+deploy/memecreator.env

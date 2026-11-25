@@ -1,0 +1,86 @@
+# memesforlaughs.com - the whole site on one server.
+#
+# Expected layout on the server (deploy/README.md):
+#   /srv/memesforlaughs/memecreator      this repository
+#   /srv/memesforlaughs/memecreator-fe   front-end repository
+#   /srv/memesforlaughs/aiproxy          AI gateway repository
+#   /data/memecreator/...                templates, memes, private photos, H2 database
+#   /data/postgres                       aiproxy's database
+#
+# Run from this folder:  docker compose up -d --build
+# Nothing publishes a port: the only way in is the Cloudflare Tunnel (cloudflared -> web:80).
+name: memesforlaughs
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aiproxy
+      POSTGRES_USER: aiproxy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+    volumes:
+      - /data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiproxy"]
+      interval: 5s
+      retries: 20
+    mem_limit: 512m
+
+  aiproxy:
+    build: ../../aiproxy
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIPROXY_DB_URL: jdbc:postgresql://postgres:5432/aiproxy
+      AIPROXY_DB_USER: aiproxy
+      AIPROXY_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      AIPROXY_MASTER_KEY: ${AIPROXY_MASTER_KEY:?set AIPROXY_MASTER_KEY in deploy/.env}
+      AIPROXY_BOOTSTRAP_ADMIN_KEY: ${AIPROXY_BOOTSTRAP_ADMIN_KEY:-}
+      AIPROXY_APP_KEY: ${AIPROXY_APP_KEY:?set AIPROXY_APP_KEY in deploy/.env}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_ENABLED: "true"
+    volumes:
+      - ./aiproxy.yml:/app/config/application.yml:ro
+    mem_limit: 1g
+
+  memecreator:
+    build: ..
+    restart: unless-stopped
+    depends_on:
+      - aiproxy
+    environment:
+      AI_GATEWAY_URL: http://aiproxy:8080
+      AI_GATEWAY_API_KEY: ${AIPROXY_APP_KEY}
+    # Google/Meta sign-in, admin email, mail. Only the variables written there are passed (an empty
+    # SPRING_MAIL_HOST would switch mail sending on), so this is an env_file rather than "environment".
+    env_file: memecreator.env
+    volumes:
+      - ./memecreator.yml:/app/config/application.yml:ro
+      - /data/memecreator:/data
+    mem_limit: 4g
+
+  web:
+    build:
+      context: .
+      dockerfile: web.Dockerfile
+      additional_contexts:
+        fe: ../../memecreator-fe
+    restart: unless-stopped
+    depends_on:
+      - memecreator
+    mem_limit: 256m
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}   # empty until the tunnel exists: this container just restarts
+    depends_on:
+      - web
+    mem_limit: 256m

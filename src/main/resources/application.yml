@@ -1,5 +1,12 @@
 server:
   port: 8081   # the AI gateway usually sits on 8080
+  servlet:
+    session:
+      timeout: 7d                  # web app sign-in lasts a week (in memory: a restart signs everyone out)
+      cookie:
+        same-site: lax             # sent on the redirect back from Google/Facebook, not on cross-site posts
+        http-only: true
+        # secure: true             # turn on once the site is served over HTTPS
 
 spring:
   application:
@@ -8,6 +15,43 @@ spring:
     multipart:
       max-file-size: 10MB          # photo uploads (POST /api/memes/from-image)
       max-request-size: 11MB
+  # Accounts (email + password, linked Google/Facebook sign-ins). H2 file database next to the project; tables come
+  # from src/main/resources/db/migration (Flyway). For PostgreSQL later: change url/username/password only.
+  datasource:
+    # AUTO_SERVER: IntelliJ's database window can open the file while the app runs (and a second copy of the app
+    # fails with a clear "port 8081 already in use" instead of "file is locked")
+    url: ${MEME_DB_URL:jdbc:h2:file:E:/Work/memecreator/data/memecreator;AUTO_SERVER=TRUE}
+    username: ${MEME_DB_USER:sa}
+    password: ${MEME_DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none              # Flyway owns the schema
+  # Confirmation / password-reset emails. Not set = the emails are written to the log instead (fine locally).
+  # To send real ones set SPRING_MAIL_HOST, SPRING_MAIL_PORT (587), SPRING_MAIL_USERNAME, SPRING_MAIL_PASSWORD,
+  # SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true, SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true and
+  # MEME_MAIL_FROM. (Don't add spring.mail.host here with an empty default: that would switch sending on.)
+  # Web app sign-in (memecreator-fe repository). Credentials come from environment variables; while one is missing, its button
+  # shows "not set up yet". Redirect URI to register: <site>/login/oauth2/code/google (or /facebook);
+  # in development that is http://localhost:5173/login/oauth2/code/google. See README "Web app".
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:not-configured}
+            client-secret: ${GOOGLE_CLIENT_SECRET:not-configured}
+            scope: [openid, profile, email]
+          facebook:                # Meta: "Facebook Login" product of a Meta app
+            client-id: ${META_APP_ID:not-configured}
+            client-secret: ${META_APP_SECRET:not-configured}
+            scope: [public_profile, email]
+        provider:
+          facebook:                # unversioned Graph API URLs = the app's default API version
+            authorization-uri: https://www.facebook.com/dialog/oauth
+            token-uri: https://graph.facebook.com/oauth/access_token
+            user-info-uri: https://graph.facebook.com/me?fields=id,name,email,picture.width(96).height(96)
+            user-name-attribute: id
 
 meme:
   templates-dir: E:/photos/meme
@@ -19,6 +63,77 @@ meme:
   jpeg-quality: 0.92
   # Where captions go on each template (text boxes + what each box means). Re-read when it changes.
   layouts-file: classpath:template-layouts.yml
+  # Memes made by accounts (web app and personal API keys) are kept for keep-for, time enough to heart, share,
+  # download or edit them; then only favorites and shared memes stay. An uploaded photo stays only while one of its
+  # memes is a favorite (the editor needs it). Checked every check-every. enabled: false keeps everything.
+  retention:
+    enabled: true
+    keep-for: 1h
+    check-every: PT5M
+  # Users' face photos: private folder (never served over HTTP, never used as templates), auto-deleted after
+  # face-retention together with the memes made from them. Purged daily at 03:30 (meme.face-purge-cron).
+  private-dir: E:/Work/memecreator/private
+  face-retention: 90d
+  # "Pick the templates" caption prompts list a shortlist of the templates, not all of them (all of them came to ~9,500
+  # tokens once the harvest ran; Groq's free tier allows 8,000 per minute for prompt + max_tokens). See README.
+  ai:
+    max-templates-in-prompt: 15     # never fewer than the memes asked for
+    keyword-slots: 3                # templates whose name/hints share a word with the topic
+    popular-slots: 6                # from Imgflip's latest top 100 (the harvest's imgflip-ranks.jsonl)
+    max-usage-chars: 160            # a template's "usage" text is cut to this in the prompt
+  # Template harvest: downloads new templates from Imgflip (top 100, daily) and memegen.link (weekly) into
+  # storage-dir, skipping duplicates of what you already have (templates-dir included). Run it by hand with
+  # POST /api/templates/harvest?source=all. See README "More templates".
+  # Signed-in web app: 6 memes per set, at most 20 sets per user per hour.
+  # open-dev-apis: false = every API needs a signed-in person or an API key (see README "Security").
+  # true = the old development mode: only /api/web and /api/admin are protected.
+  web:
+    memes-per-set: 6
+    max-sets-per-hour: 20
+    # Prompts per day (a meme set from a topic or a photo), per plan; 0 = no daily limit. The day resets at midnight
+    # in meme.api.quota-zone. Change them in config/application.yml (or MEME_WEB_FREEPROMPTSPERDAY) and restart.
+    # Premium can't be bought yet: an admin puts testers on it with PUT /api/admin/accounts/plan.
+    free-prompts-per-day: 10
+    premium-prompts-per-day: 0
+    open-dev-apis: false
+    after-login-url: /
+  # Email + password accounts: links in emails point to public-url.
+  accounts:
+    public-url: ${MEME_PUBLIC_URL:http://localhost:5173}   # online: https://memesforlaughs.com
+    mail-from: ${MEME_MAIL_FROM:Memes for Laughs <no-reply@localhost>}
+    verify-link-ttl: 24h
+    reset-link-ttl: 1h
+    min-password-length: 10
+    # Version (date) of memecreator-fe/public/terms.html + privacy.html. When you change those pages, change it here
+    # and in the pages: everyone is asked to accept the new version before making memes again.
+    terms-version: "2026-11-22"
+    unconfirmed-ttl: 7d             # email + password sign-ups never confirmed are deleted after this
+  # The site name in a corner of every generated meme (never on uploaded photos). Set enabled: false to turn it off.
+  watermark:
+    enabled: true
+    text: memesforlaughs.com
+  # People's personal API keys (profile page → API keys; X-API-Key: mcu_...): POST /api/v1/memes.
+  api:
+    free-sets-per-day: 5            # meme sets per day through the API, FREE accounts
+    premium-sets-per-day: 100       # PREMIUM accounts (no way to buy premium yet)
+    quota-zone: Europe/Rome         # the day resets at midnight here
+    max-keys-per-account: 5
+  # Who may do what: README "Security". Programs (footballmeme) use API keys: issue one with
+  #   ApiKeyTool issue footballmeme      (IntelliJ: run com.memecreator.security.ApiKeyTool with those arguments)
+  # People signing in with one of these emails (comma-separated) are admins.
+  security:
+    admin-emails: ${MEME_ADMIN_EMAILS:}
+    api-keys-file: E:/Work/memecreator/private/api-keys.json   # hashes only; inside private-dir, never served
+  harvest:
+    enabled: true                   # scheduled runs; the endpoint works either way
+    storage-dir: E:/photos/meme-storage
+    use-as-templates: true          # also pick templates from storage-dir/templates
+    run-on-startup: false
+    imgflip-cron: "0 15 4 * * *"    # daily 04:15
+    memegen-cron: "0 45 4 * * MON"  # Mondays 04:45
+    max-hash-distance: 10           # 0 = only byte-identical copies count as duplicates
+    min-image-side: 250
+    download-delay: 300ms
 
 ai-gateway:
   base-url: ${AI_GATEWAY_URL:http://localhost:8080}
@@ -26,32 +141,42 @@ ai-gateway:
   models-path: /v1/models              # used by GET /api/ai/models
   # aiproxy dev key, sent as "Authorization: Bearer <key>". Set AI_GATEWAY_API_KEY to override; never use in prod.
   api-key: ${AI_GATEWAY_API_KEY:aip_dev_user_key_do_not_use_in_prod}
-  # Full "provider/model" id. Groq shut down llama-3.3-70b-versatile (Aug 2026); aiproxy still lists it and then
-  # silently falls back to mock/mock-fast. gpt-oss-120b isn't in aiproxy's catalogue, but aiproxy routes
-  # unregistered "provider/model" ids (allow-unregistered-models: true).
-  model: ${AI_GATEWAY_MODEL:groq/openai/gpt-oss-120b}
+  # aiproxy's virtual model: an ordered failover chain (dev: gemini-3.8-flash, then groq/openai/gpt-oss-120b;
+  # auto/vision: gemini-3.8-flash, then groq/qwen/qwen3.8-27b), retried inside the same call without the caller noticing. A fixed "provider/model" id such as
+  # groq/openai/gpt-oss-120b still works and skips aiproxy's failover.
+  model: ${AI_GATEWAY_MODEL:auto/caption}
   temperature: 1.0                     # gpt-oss is tuned for 1.0
-  max-tokens: 2000                     # gpt-oss reasoning + answer share this budget
+  # Sent as "max_tokens" on every call. Groq's free tier counts prompt + max_tokens against 8,000 tokens/minute, so
+  # bigger values get calls rejected; but gpt-oss reasoning + answer share this budget, so far below 1024 cuts the JSON.
+  max-tokens: 1536
   # Top-level "reasoning_effort" is only for calling an OpenAI-style API directly (see application-groq.yml).
   # aiproxy rejects it; through aiproxy use provider-options below instead.
   reasoning-effort:
   provider-options:
     groq:
       "[reasoning_effort]": low        # brackets keep the underscore in the key
-  json-mode: true                      # send response_format json_object (model needs the json_mode capability)
-  # Photo memes need a model that can read images. Groq's free vision model; copy the exact id from the Groq
-  # console if it changes. It has its own rate limits, separate from the text model.
-  vision-model: ${AI_GATEWAY_VISION_MODEL:groq/qwen/qwen3.8-27b}
-  vision-max-tokens: 3000              # Qwen may "think" before answering; thinking + answer share this budget
-  image-format: aiproxy                # aiproxy's image message format; "openai" when calling Groq directly
+  # Photo memes need a model that can read images: aiproxy's virtual vision model (failover like auto/caption).
+  # Or a fixed id such as groq/qwen/qwen3.8-27b.
+  vision-model: ${AI_GATEWAY_VISION_MODEL:auto/vision}
+  vision-max-tokens: 1536              # same trade-off as max-tokens (Qwen may "think" before answering)
+  # Caption and photo-meme calls always send response_format json_object, and photos as data: URIs (aiproxy's Gemini
+  # adapter rejects http links).
+  image-format: aiproxy                # {"type":"image","url":...}: aiproxy rejects OpenAI's image_url; "openai" for Groq
   # vision-provider-options:           # e.g. to turn Qwen's thinking off if it runs out of tokens:
   #   groq:
   #     "[reasoning_effort]": none
+  # AI face replacement (POST /api/memes/with-face/ai...) needs a model that edits images: images in, an image out.
+  # Groq has none. Gemini's image models do; aiproxy must return the image part of Gemini's answer (see README).
+  # It sends the user's face photo to that provider. Leave empty to switch those endpoints off.
+  image-model: ${AI_GATEWAY_IMAGE_MODEL:gemini/gemini-2.5-flash-image}
+  image-edit-size: 1024                # template area sent to the model, longest side in pixels
   connect-timeout: 5s
-  read-timeout: 90s
+  read-timeout: 90s                    # image edits take 10-30 s
 
 springdoc:
   swagger-ui:
+    csrf:
+      enabled: true          # Swagger "Try it out" while signed in: sends the XSRF-TOKEN cookie back
     path: /swagger-ui.html
     operations-sorter: method
   api-docs:

@@ -4,13 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * What the AI made of an uploaded photo: its reading of the picture, plus the captions to render.
+ * What the AI made of an uploaded photo: its reading of the picture, the captions to render, and the parts of the
+ * picture captions must not cover.
  */
-public record PhotoPlan(Analysis analysis, List<Caption> captions) {
+public record PhotoPlan(Analysis analysis, List<Caption> captions, List<KeepClearArea> keepClear) {
 
     public PhotoPlan {
         analysis = analysis == null ? Analysis.EMPTY : analysis;
         captions = captions == null ? List.of() : List.copyOf(captions);
+        keepClear = keepClear == null ? List.of() : List.copyOf(keepClear);
+    }
+
+    public PhotoPlan(Analysis analysis, List<Caption> captions) {
+        this(analysis, captions, List.of());
     }
 
     /** The AI's reading of the photo, returned to the caller so they can see what it understood. */

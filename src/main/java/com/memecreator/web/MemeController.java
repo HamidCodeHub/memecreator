@@ -94,13 +94,17 @@ public class MemeController {
     public List<TemplateInfo> templates() {
         return templates.findAll().stream().map(t -> {
             TemplateLayout layout = memeService.layoutOf(t);
+            List<CharacterInfo> characters = layout.characters().entrySet().stream()
+                    .map(e -> new CharacterInfo(e.getKey(), e.getValue(), layout.slotsOf(e.getKey()),
+                            e.getKey().equals(layout.defaultCharacter())))
+                    .toList();
             return new TemplateInfo(t.id(), t.name(), layout.custom(),
-                    layout.boxes().stream().map(TextBox::hint).toList());
+                    layout.boxes().stream().map(TextBox::hint).toList(), layout.faces().size(), characters);
         }).toList();
     }
 
-    @Operation(summary = "Preview a template's text boxes",
-            description = "Returns the template as PNG with every text box outlined and numbered. "
+    @Operation(summary = "Preview a template's text boxes and face slots",
+            description = "Returns the template as PNG with every text box (red, #n) and face slot (blue, Fn) outlined. "
                     + "Open it in the browser while editing template-layouts.yml.")
     @GetMapping("/templates/preview")
     public ResponseEntity<byte[]> preview(
@@ -131,7 +135,15 @@ public class MemeController {
     /**
      * @param customLayout false when the template uses the generic top/bottom layout
      * @param boxes        what goes in each text box, in order
+     * @param faceSlots    how many faces a user's face can be pasted onto (0 = not usable for face memes)
+     * @param characters   on templates with several people: who they are and which face slots show them
+     *                     (empty when every face slot is the same person)
      */
-    public record TemplateInfo(String id, String name, boolean customLayout, List<String> boxes) {
+    public record TemplateInfo(String id, String name, boolean customLayout, List<String> boxes, int faceSlots,
+                               List<CharacterInfo> characters) {
+    }
+
+    /** @param defaultCharacter true for the one that gets the user's face when neither they nor the AI choose */
+    public record CharacterInfo(String name, String description, List<Integer> slots, boolean defaultCharacter) {
     }
 }

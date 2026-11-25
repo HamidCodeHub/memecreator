@@ -46,6 +46,18 @@ class CaptionParserTest {
     }
 
     @Test
+    void readsTheCharacterChosenForTheFace() {
+        String reply = """
+                {"memes":[{"template":"Anakin Padme 4 Panel","texts":["a","b","","c"],"face":"padme"},
+                          {"template":"Drake Hotline Bling","texts":["x","y"]}]}""";
+
+        List<MemeCaption> captions = CaptionParser.parse(reply, mapper);
+
+        assertThat(captions.get(0).face()).isEqualTo("padme");
+        assertThat(captions.get(1).face()).isNull();
+    }
+
+    @Test
     void textsForPadsAndTrims() {
         MemeCaption c = new MemeCaption("X", List.of("a", "b", "c"));
 
@@ -57,5 +69,19 @@ class CaptionParserTest {
     void failsOnNonJson() {
         assertThatThrownBy(() -> CaptionParser.parse("I can't do that", mapper))
                 .isInstanceOf(AiGatewayException.class);
+    }
+
+    @Test
+    void stripsAFenceAroundTheWholeReply() {
+        String reply = "  ```json\n{\"memes\":[{\"template\":\"X\",\"texts\":[\"a\",\"b\"]}]}\n```  ";
+
+        assertThat(CaptionParser.parse(reply, mapper)).containsExactly(new MemeCaption("X", List.of("a", "b")));
+    }
+
+    @Test
+    void aReplyThatIsStillNotJsonIsAnError() {
+        assertThatThrownBy(() -> CaptionParser.parse("```json\n{\"memes\":[{\"template\":\"X\",\n```", mapper))
+                .isInstanceOf(AiGatewayException.class)
+                .hasMessageContaining("not valid JSON");
     }
 }

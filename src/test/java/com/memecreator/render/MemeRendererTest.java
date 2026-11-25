@@ -88,4 +88,31 @@ class MemeRendererTest {
         }
         return n;
     }
+
+    @Test
+    void barsGoAboveAndBelowWithoutCoveringThePicture() {
+        BufferedImage photo = new BufferedImage(600, 400, BufferedImage.TYPE_INT_RGB);
+        int top = renderer.barHeight("me when", 600);
+        int bottom = renderer.barHeight("the punchline", 600);
+
+        BufferedImage out = renderer.renderBars(photo, "me when", "the punchline");
+
+        assertThat(top).isPositive();
+        assertThat(bottom).isPositive();
+        assertThat(out.getHeight()).isEqualTo(top + 400 + bottom);
+        assertThat(out.getRGB(300, top + 200) & 0xFFFFFF).isZero();   // the black picture, untouched
+        assertThat(renderer.barHeight("  ", 600)).isZero();
+        assertThat(renderer.renderBars(photo, null, " ")).isSameAs(photo);
+    }
+
+    @Test
+    void aSmallerBoxGivesASmallerFont() {
+        TextBox big = new TextBox(0.03, 0.02, 0.94, 0.26, TextBox.TextColor.WHITE, TextBox.VAlign.TOP, "top");
+        TextBox small = new TextBox(0.03, 0.02, 0.94, 0.06, TextBox.TextColor.WHITE, TextBox.VAlign.TOP, "top");
+        String text = "when a haters hate message tries to sneak up on you";
+
+        assertThat(renderer.fontSizeFor(text, small, 1200, 1600))
+                .isPositive().isLessThan(renderer.fontSizeFor(text, big, 1200, 1600));
+        assertThat(renderer.fontSizeFor(" ", big, 1200, 1600)).isZero();
+    }
 }

@@ -1,0 +1,8 @@
+target
+output
+private
+data
+config
+.idea
+.git
+*.iml

@@ -14,7 +14,9 @@ import java.util.List;
  * {"analysis": {"description": "...", "vibe": "...", "funny_angles": ["..."], "empty_areas": "..."},
  *  "memes": [{"style": "TOP_BOTTOM", "texts": ["top", "bottom"]}, {"style": "CAPTION_BAR", "texts": ["..."]}]}
  * </pre>
- * Both parts are optional: the first HIGH call returns only an analysis, the second only memes.
+ * Both parts are optional: the first HIGH call returns only an analysis, the second only memes. The analysis may
+ * also carry {@code "keep_clear": [[ymin, xmin, ymax, xmax], ...]} (0-1000): faces and details captions must not
+ * cover.
  */
 public final class PhotoPlanParser {
 
@@ -38,7 +40,31 @@ public final class PhotoPlanParser {
                 }
             }
         }
-        return new PhotoPlan(analysis, captions);
+        return new PhotoPlan(analysis, captions, keepClear(analysisNode.has("keep_clear") ? analysisNode : root));
+    }
+
+    /**
+     * Boxes covering more than half the photo are dropped: the model boxed a whole body or scene, which would push
+     * every caption into a bar. Real close-up faces are found by the local face detector anyway.
+     */
+    static List<KeepClearArea> keepClear(JsonNode node) {
+        List<KeepClearArea> out = new ArrayList<>();
+        JsonNode boxes = node == null ? null : node.has("keep_clear") ? node.get("keep_clear") : node.get("keepClear");
+        if (boxes == null || !boxes.isArray()) {
+            return out;
+        }
+        for (JsonNode b : boxes) {
+            JsonNode coords = b.isObject() ? b.path("box_2d") : b;
+            if (!coords.isArray() || coords.size() != 4 || !coords.get(0).isNumber()) {
+                continue;
+            }
+            KeepClearArea area = KeepClearArea.fromBox1000(coords.get(0).asDouble(), coords.get(1).asDouble(),
+                    coords.get(2).asDouble(), coords.get(3).asDouble());
+            if (area != null && area.area() <= 0.5) {
+                out.add(area);
+            }
+        }
+        return out;
     }
 
     private static JsonNode readTree(String reply, ObjectMapper mapper) {

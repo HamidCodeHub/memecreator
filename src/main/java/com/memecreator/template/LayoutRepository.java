@@ -36,6 +36,12 @@ public class LayoutRepository {
         }
     }
 
+    /** The "duplicates:" section: normalized hidden name → normalized name of the template kept instead. */
+    public Map<String, String> duplicates() {
+        refreshIfChanged();
+        return parsed.duplicates();
+    }
+
     public TemplateLayout layoutFor(MemeTemplate template) {
         refreshIfChanged();
         LayoutParser.Parsed p = parsed;

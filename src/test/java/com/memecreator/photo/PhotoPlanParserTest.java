@@ -53,4 +53,25 @@ class PhotoPlanParserTest {
         assertThatThrownBy(() -> PhotoPlanParser.parse("sorry, I can't see images", mapper))
                 .isInstanceOf(AiGatewayException.class);
     }
+
+    @Test
+    void readsKeepClearBoxesOnAThousandScale() {
+        PhotoPlan plan = PhotoPlanParser.parse("""
+                {"analysis":{"description":"a statue","keep_clear":[[50,450,200,640],{"box_2d":[400,130,560,420]},
+                  [0,0,900,900],[10,20],"oops",[300,300,200,400]]},
+                 "memes":[{"style":"BOTTOM","texts":["x"]}]}""", mapper);
+
+        assertThat(plan.keepClear()).hasSize(2);   // the whole-photo box and the broken ones are dropped
+        KeepClearArea head = plan.keepClear().get(0);
+        assertThat(head.y()).isCloseTo(0.05, org.assertj.core.data.Offset.offset(1e-9));
+        assertThat(head.x()).isCloseTo(0.45, org.assertj.core.data.Offset.offset(1e-9));
+        assertThat(head.bottom()).isCloseTo(0.20, org.assertj.core.data.Offset.offset(1e-9));
+        assertThat(head.source()).isEqualTo("ai");
+    }
+
+    @Test
+    void noKeepClearMeansNone() {
+        assertThat(PhotoPlanParser.parse("{\"memes\":[{\"style\":\"TOP\",\"texts\":[\"x\"]}]}", mapper)
+                .keepClear()).isEmpty();
+    }
 }

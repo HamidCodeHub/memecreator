@@ -1,0 +1,29 @@
+# Server settings for memecreator, mounted as /app/config/application.yml (overrides src/main/resources).
+# Secrets are NOT here: they come from deploy/memecreator.env (Google/Meta sign-in, admin email, mail).
+server:
+  forward-headers-strategy: framework   # behind Cloudflare + Caddy: build https://memesforlaughs.com/... URLs
+  servlet:
+    session:
+      cookie:
+        secure: true
+
+spring:
+  datasource:
+    url: jdbc:h2:file:/data/db/memecreator
+
+springdoc:                               # no Swagger UI / API docs on the public site
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+meme:
+  templates-dir: /data/templates         # your hand-picked templates (E:\photos\meme)
+  output-dir: /data/output
+  private-dir: /data/private
+  security:
+    api-keys-file: /data/private/api-keys.json
+  harvest:
+    storage-dir: /data/meme-storage      # Imgflip / memegen.link downloads (E:\photos\meme-storage)
+  accounts:
+    public-url: https://memesforlaughs.com

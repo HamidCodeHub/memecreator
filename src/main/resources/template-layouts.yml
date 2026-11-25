@@ -10,7 +10,15 @@
 #                        black = plain black text (on white or light areas)
 #   valign               top | middle | bottom (where the text sits inside its box)
 #
-# Templates not listed here get the classic layout: top text + bottom text.
+#     faces:                      # optional: where a user's face can be pasted (POST /api/memes/with-face)
+#       - [x, y, w, h, rex, rey, lex, ley, nx, ny, rmx, rmy, lmx, lmy]
+#
+#   faces: face box, then 5 landmarks as fractions of the image: the two eyes, the nose tip and the two mouth
+#          corners, as found by OpenCV's YuNet face detector. The user's face is aligned to these points.
+#          Only photo templates have faces; numbered in reading order (top to bottom, left to right).
+#
+# Templates not listed here get the classic layout: top text + bottom text, and no face slots.
+# An entry may have only "faces:" and no "boxes:"; it then keeps the classic top/bottom captions.
 # Check a layout visually with GET /api/templates/preview?name=<template>; this file is re-read
 # when it changes (in IntelliJ: edit target/classes copy, or rebuild with Ctrl+F9).
 
@@ -18,6 +26,12 @@ default:
   boxes:
     - [0.03, 0.02, 0.94, 0.26, white, top, "top text"]
     - [0.03, 0.72, 0.94, 0.26, white, bottom, "bottom text"]
+
+# The same meme under other names, when you'd rather not delete the extra files. The template on the left is kept;
+# the names in its list are hidden from the AI, random picks and the gallery, and asking for one of them by name gives
+# the kept one. Keep the name that best describes the joke. Matched like layouts (case and punctuation ignored), e.g.
+#   "Drake Hotline Bling": ["Drake Blank", "No - Yes"]
+duplicates: {}
 
 layouts:
 
@@ -36,6 +50,12 @@ layouts:
     boxes:
       - [0.02, 0.75, 0.55, 0.23, white, bottom, "the unsuspecting one in front"]
       - [0.55, 0.02, 0.43, 0.20, white, top, "the threat appearing behind him"]
+    characters:   # first one = default face target
+      aj: "the man in front, laughing, unaware"
+      undertaker: "the menacing man appearing behind him"
+    faces:
+      - [0.430, 0.320, 0.121, 0.302, 0.460, 0.425, 0.516, 0.419, 0.487, 0.473, 0.468, 0.530, 0.518, 0.525, aj]
+      - [0.545, 0.190, 0.125, 0.311, 0.566, 0.314, 0.620, 0.308, 0.582, 0.370, 0.578, 0.415, 0.622, 0.411, undertaker]
 
   "Always Has Been":
     boxes:
@@ -48,6 +68,14 @@ layouts:
       - [0.52, 0.33, 0.46, 0.16, white, bottom, "Padme's hopeful assumption: '..., right?'"]
       - [0.02, 0.83, 0.46, 0.16, white, bottom, "Anakin's silent stare (usually empty)"]
       - [0.52, 0.83, 0.46, 0.16, white, bottom, "Padme repeats her question, now worried"]
+    characters:   # first one = default face target
+      anakin: "Anakin, the young man announcing the plan (panels 1 and 3)"
+      padme: "Padme, the young woman asking '..., right?' (panels 2 and 4)"
+    faces:
+      - [0.132, 0.106, 0.191, 0.234, 0.190, 0.199, 0.280, 0.188, 0.250, 0.249, 0.207, 0.285, 0.284, 0.275, anakin]
+      - [0.559, 0.071, 0.371, 0.461, 0.676, 0.225, 0.841, 0.255, 0.741, 0.341, 0.645, 0.383, 0.804, 0.410, padme]
+      - [0.065, 0.517, 0.374, 0.466, 0.211, 0.700, 0.363, 0.694, 0.320, 0.795, 0.225, 0.870, 0.354, 0.865, anakin]
+      - [0.581, 0.532, 0.347, 0.468, 0.665, 0.691, 0.823, 0.713, 0.717, 0.798, 0.650, 0.867, 0.788, 0.885, padme]
 
   "Anime Girl Hiding from Terminator":
     boxes:
@@ -70,6 +98,8 @@ layouts:
     usage: The image already says "I am once again asking"; the box finishes the sentence.
     boxes:
       - [0.03, 0.87, 0.94, 0.12, white, middle, "finishes 'I am once again asking ...', e.g. 'for your support'"]
+    faces:
+      - [0.444, 0.255, 0.206, 0.287, 0.506, 0.364, 0.601, 0.363, 0.556, 0.422, 0.512, 0.462, 0.598, 0.460]
 
   "Bike Fall":
     usage: Three panels; the rider puts a stick in his own wheel, then blames something else.
@@ -104,6 +134,8 @@ layouts:
   "Change My Mind":
     boxes:
       - [0.44, 0.58, 0.45, 0.22, black, middle, "the controversial opinion on the sign"]
+    faces:
+      - [0.380, 0.141, 0.055, 0.098, 0.404, 0.177, 0.425, 0.177, 0.420, 0.196, 0.406, 0.209, 0.423, 0.214]
 
   "Clown Applying Makeup":
     usage: Four steps of reasoning that gradually turn the person into a clown.
@@ -112,27 +144,34 @@ layouts:
       - [0.02, 0.26, 0.58, 0.23, black, middle, "step 2: a bit sillier"]
       - [0.02, 0.51, 0.58, 0.23, black, middle, "step 3: clearly absurd"]
       - [0.02, 0.76, 0.58, 0.23, black, middle, "step 4: full clown conclusion"]
+    faces:
+      - [0.688, 0.009, 0.182, 0.215, 0.721, 0.095, 0.797, 0.094, 0.741, 0.139, 0.732, 0.170, 0.793, 0.169]
+      - [0.667, 0.554, 0.166, 0.188, 0.692, 0.634, 0.748, 0.632, 0.703, 0.673, 0.707, 0.701, 0.750, 0.699]
 
   "Distracted Boyfriend":
     boxes:
       - [0.05, 0.62, 0.36, 0.20, white, middle, "the tempting new thing (woman in red)"]
       - [0.42, 0.42, 0.30, 0.15, white, middle, "the distracted one (boyfriend)"]
       - [0.70, 0.55, 0.29, 0.20, white, middle, "what he should stay loyal to (girlfriend)"]
+    characters:   # first one = default face target
+      boyfriend: "the boyfriend turning to look"
+      woman-in-red: "the woman in red he is looking at"
+    faces:
+      - [0.216, 0.259, 0.121, 0.242, 0.250, 0.351, 0.303, 0.355, 0.275, 0.395, 0.250, 0.433, 0.297, 0.435, woman-in-red]
+      - [0.496, 0.186, 0.092, 0.178, 0.511, 0.263, 0.549, 0.252, 0.526, 0.299, 0.524, 0.324, 0.559, 0.315, boyfriend]
 
   "Domino Effect":
     boxes:
       - [0.42, 0.86, 0.56, 0.13, white, bottom, "the tiny cause (small domino)"]
       - [0.02, 0.02, 0.45, 0.20, white, top, "the huge consequence (giant domino)"]
 
-  "Drake Blank":
-    boxes:
-      - [0.52, 0.02, 0.46, 0.46, black, middle, "the thing Drake rejects"]
-      - [0.52, 0.52, 0.46, 0.46, black, middle, "the thing Drake approves"]
-
   "Drake Hotline Bling":
     boxes:
       - [0.52, 0.02, 0.46, 0.46, black, middle, "the thing Drake rejects"]
       - [0.52, 0.52, 0.46, 0.46, black, middle, "the thing Drake approves"]
+    faces:
+      - [0.043, 0.099, 0.140, 0.150, 0.056, 0.184, 0.101, 0.155, 0.078, 0.210, 0.097, 0.227, 0.135, 0.203]
+      - [0.244, 0.529, 0.124, 0.154, 0.278, 0.573, 0.339, 0.576, 0.304, 0.604, 0.278, 0.632, 0.334, 0.634]
 
   "Epic Handshake":
     boxes:
@@ -158,17 +197,27 @@ layouts:
       - [0.15, 0.02, 0.40, 0.15, white, top, "the person with the quick fix"]
       - [0.52, 0.30, 0.46, 0.18, white, middle, "the big problem (the leak)"]
       - [0.30, 0.80, 0.68, 0.18, white, bottom, "the lazy quick fix (the tape)"]
+    faces:
+      - [0.290, 0.035, 0.083, 0.102, 0.345, 0.080, 0.364, 0.080, 0.368, 0.098, 0.341, 0.112, 0.354, 0.115]
 
   "Friendship ended":
     usage: '"Friendship ended with MUDASIR, now SALMAN is my best friend" — label the old and the new favourite.'
     boxes:
       - [0.00, 0.84, 0.30, 0.15, white, bottom, "the old favourite that got dumped"]
       - [0.55, 0.40, 0.43, 0.15, white, middle, "the new favourite"]
+    characters:   # first one = default face target
+      narrator: "the man announcing the friendship change (left)"
+      new-friend: "the new best friend (right)"
+    faces:
+      - [0.206, 0.121, 0.163, 0.264, 0.272, 0.217, 0.341, 0.220, 0.322, 0.275, 0.276, 0.316, 0.331, 0.319, narrator]
+      - [0.628, 0.282, 0.147, 0.259, 0.649, 0.391, 0.727, 0.385, 0.682, 0.451, 0.663, 0.483, 0.727, 0.478, new-friend]
 
   "Grant Gustin over grave":
     boxes:
       - [0.10, 0.22, 0.33, 0.35, black, middle, "what died (written on the gravestone)"]
       - [0.50, 0.84, 0.48, 0.15, white, bottom, "the one smugly posing (who killed it)"]
+    faces:
+      - [0.492, 0.456, 0.094, 0.115, 0.511, 0.502, 0.552, 0.501, 0.531, 0.526, 0.523, 0.547, 0.557, 0.543]
 
   "Grim Reaper Knocking Door":
     boxes:
@@ -189,11 +238,19 @@ layouts:
     boxes:
       - [0.03, 0.02, 0.94, 0.26, white, top, "'You <do the normal thing>. I <do the smug thing>.'"]
       - [0.03, 0.72, 0.94, 0.26, white, bottom, "'We are not the same.'"]
+    faces:
+      - [0.441, 0.100, 0.216, 0.243, 0.485, 0.191, 0.594, 0.209, 0.509, 0.250, 0.468, 0.281, 0.552, 0.296]
 
   "I Bet He's Thinking About Other Women":
     boxes:
       - [0.00, 0.02, 0.50, 0.22, white, top, "her thought: 'I bet he's thinking about other women'"]
       - [0.50, 0.76, 0.50, 0.22, white, bottom, "what he is actually thinking about"]
+    characters:   # first one = default face target
+      him: "the man in bed, thinking about something else"
+      her: "the woman in bed, suspicious"
+    faces:
+      - [0.217, 0.097, 0.150, 0.309, 0.282, 0.197, 0.336, 0.218, 0.314, 0.268, 0.272, 0.311, 0.317, 0.329, her]
+      - [0.698, 0.185, 0.130, 0.324, 0.773, 0.306, 0.814, 0.319, 0.808, 0.379, 0.766, 0.429, 0.794, 0.441, him]
 
   "Inhaling Seagull":
     usage: Four panels building up to a loud scream.
@@ -225,6 +282,11 @@ layouts:
     boxes:
       - [0.08, 0.55, 0.84, 0.15, black, middle, "the event (reads 'Marked safe from <X> today')"]
 
+  "Megamind no bitches":
+    usage: Megamind peeks at the viewer asking "No ...?", mocking the obvious thing someone lacks.
+    boxes:
+      - [0.03, 0.02, 0.94, 0.26, white, top, "'No ...?': the thing they obviously don't have (2-4 words)"]
+
   "Monkey Puppet":
     boxes:
       - [0.02, 0.02, 0.96, 0.34, black, middle, "the awkward situation that makes you look away"]
@@ -235,11 +297,14 @@ layouts:
       - [0.30, 0.03, 0.45, 0.10, white, top, "the new favourite (girl being played with)"]
       - [0.00, 0.49, 0.50, 0.10, white, middle, "the neglected one drowning"]
       - [0.15, 0.62, 0.70, 0.15, white, top, "the long-forgotten one (skeleton at the bottom)"]
-
-  "No - Yes":
-    boxes:
-      - [0.40, 0.04, 0.56, 0.42, black, middle, "the thing rejected"]
-      - [0.40, 0.54, 0.56, 0.42, black, middle, "the thing approved"]
+    characters:   # first one = default face target
+      drowning-kid: "the neglected kid drowning"
+      mother: "the mother busy with the other kid"
+      happy-kid: "the kid getting all the attention"
+    faces:
+      - [0.503, 0.200, 0.060, 0.056, 0.533, 0.219, 0.557, 0.219, 0.554, 0.229, 0.534, 0.242, 0.553, 0.240, happy-kid]
+      - [0.159, 0.382, 0.161, 0.151, 0.221, 0.438, 0.283, 0.427, 0.271, 0.459, 0.237, 0.486, 0.296, 0.476, drowning-kid]
+      - [0.786, 0.252, 0.071, 0.080, 0.804, 0.274, 0.810, 0.275, 0.795, 0.287, 0.804, 0.305, 0.808, 0.307, mother]
 
   "Panik Kalm Panik":
     boxes:
@@ -258,6 +323,8 @@ layouts:
       - [0.02, 0.02, 0.96, 0.15, white, top, "the situation: waiting for ..."]
       - [0.02, 0.84, 0.46, 0.15, white, bottom, "sad moment 1"]
       - [0.52, 0.84, 0.46, 0.15, white, bottom, "sad moment 2"]
+    faces:
+      - [0.406, 0.024, 0.104, 0.172, 0.470, 0.098, 0.502, 0.097, 0.508, 0.135, 0.467, 0.155, 0.498, 0.156]
 
   "say the line bart! simpsons":
     boxes:
@@ -275,6 +342,8 @@ layouts:
     boxes:
       - [0.02, 0.02, 0.46, 0.46, black, middle, "something important he sleeps through ('i sleep')"]
       - [0.02, 0.52, 0.46, 0.46, black, middle, "something trivial that wakes him up ('real shit')"]
+    faces:
+      - [0.523, 0.044, 0.344, 0.489, 0.559, 0.196, 0.697, 0.171, 0.593, 0.283, 0.602, 0.391, 0.723, 0.370]
 
   "Soldier protecting sleeping child":
     boxes:
@@ -306,6 +375,13 @@ layouts:
     boxes:
       - [0.53, 0.04, 0.38, 0.16, black, middle, "The Rock asks an innocent question"]
       - [0.55, 0.37, 0.37, 0.14, black, middle, "her alarming answer"]
+    characters:   # first one = default face target
+      rock: "The Rock, the driver (panels 1 and 3)"
+      passenger: "the passenger who gives the alarming answer (panel 2)"
+    faces:
+      - [0.229, 0.002, 0.266, 0.284, 0.375, 0.081, 0.469, 0.062, 0.484, 0.126, 0.410, 0.209, 0.478, 0.192, rock]
+      - [0.394, 0.400, 0.137, 0.168, 0.445, 0.471, 0.505, 0.470, 0.484, 0.503, 0.452, 0.527, 0.503, 0.528, passenger]
+      - [0.265, 0.704, 0.190, 0.209, 0.324, 0.786, 0.412, 0.793, 0.369, 0.832, 0.322, 0.856, 0.398, 0.863, rock]
 
   "The Scroll Of Truth":
     boxes:
@@ -319,6 +395,8 @@ layouts:
     boxes:
       - [0.08, 0.09, 0.36, 0.26, black, middle, "first thing"]
       - [0.55, 0.13, 0.36, 0.25, black, middle, "second thing (actually the same)"]
+    faces:
+      - [0.578, 0.573, 0.165, 0.201, 0.616, 0.652, 0.691, 0.650, 0.654, 0.686, 0.625, 0.720, 0.692, 0.717]
 
   "This Is Fine":
     boxes:
@@ -340,6 +418,8 @@ layouts:
     boxes:
       - [0.02, 0.24, 0.46, 0.18, white, top, "what I receive"]
       - [0.52, 0.24, 0.46, 0.18, white, top, "what you receive"]
+    faces:
+      - [0.378, 0.404, 0.256, 0.294, 0.443, 0.518, 0.566, 0.518, 0.507, 0.575, 0.454, 0.619, 0.557, 0.619]
 
   "Tuxedo Winnie The Pooh":
     boxes:
@@ -372,6 +452,8 @@ layouts:
     boxes:
       - [0.06, 0.22, 0.40, 0.28, black, middle, "what he refuses to do (card reads '<X> or draw 25')"]
       - [0.52, 0.84, 0.46, 0.15, white, bottom, "the stubborn person (optional)"]
+    faces:
+      - [0.662, 0.132, 0.123, 0.162, 0.723, 0.202, 0.768, 0.200, 0.763, 0.234, 0.731, 0.255, 0.767, 0.258]
 
   "whe i'm in a competition and my opponent is":
     boxes:
@@ -382,8 +464,987 @@ layouts:
       - [0.50, 0.02, 0.48, 0.12, white, top, "the one causing the problem (shooter)"]
       - [0.02, 0.36, 0.48, 0.12, white, middle, "the victim (on the couch)"]
       - [0.02, 0.86, 0.96, 0.13, white, bottom, "the shooter innocently: 'Why would <X> do this?'"]
+    faces:
+      - [0.608, 0.572, 0.075, 0.089, 0.626, 0.607, 0.656, 0.606, 0.636, 0.622, 0.629, 0.637, 0.654, 0.636]
 
   "Woman Yelling At Cat":
     boxes:
       - [0.02, 0.005, 0.47, 0.13, black, middle, "the woman's angry accusation"]
       - [0.51, 0.005, 0.47, 0.13, black, middle, "the cat's smug reply"]
+    characters:   # first one = default face target
+      woman: "the woman yelling and crying"
+      cat: "the smug cat at the table"
+      friend: "the friend holding the yelling woman back"
+    faces:
+      - [0.325, 0.309, 0.136, 0.293, 0.361, 0.434, 0.424, 0.435, 0.395, 0.494, 0.367, 0.530, 0.416, 0.536, friend]
+      - [0.129, 0.391, 0.153, 0.335, 0.180, 0.517, 0.250, 0.507, 0.230, 0.577, 0.196, 0.640, 0.251, 0.631, woman]
+      - [0.704, 0.507, 0.099, 0.171, 0.723, 0.574, 0.757, 0.574, 0.734, 0.614, 0.730, 0.637, 0.757, 0.638, cat]
+
+  # ---- photo templates with classic top/bottom captions: face slots only ----
+
+  "A second plane has just hit":
+    faces:
+      - [0.521, 0.356, 0.327, 0.500, 0.561, 0.544, 0.703, 0.568, 0.573, 0.645, 0.550, 0.719, 0.666, 0.736]
+
+  "Absolute Cinema":
+    faces:
+      - [0.414, 0.151, 0.176, 0.325, 0.469, 0.278, 0.554, 0.277, 0.516, 0.343, 0.477, 0.392, 0.549, 0.390]
+
+  "Ancient Aliens":
+    faces:
+      - [0.414, 0.242, 0.274, 0.429, 0.475, 0.396, 0.605, 0.431, 0.511, 0.495, 0.452, 0.554, 0.553, 0.584]
+
+  "Bad Luck Brian":
+    faces:
+      - [0.343, 0.264, 0.323, 0.350, 0.456, 0.384, 0.602, 0.401, 0.535, 0.467, 0.445, 0.513, 0.571, 0.527]
+
+  "Bernie Sanders Once Again Asking":
+    faces:
+      - [0.383, 0.114, 0.255, 0.474, 0.468, 0.301, 0.582, 0.306, 0.534, 0.398, 0.470, 0.467, 0.566, 0.472]
+
+  "Charlie Conspiracy (Always Sunny in Philidelphia)":
+    faces:
+      - [0.292, 0.184, 0.101, 0.188, 0.331, 0.257, 0.378, 0.263, 0.362, 0.301, 0.329, 0.325, 0.368, 0.332]
+
+  "Disaster Girl":
+    faces:
+      - [0.603, 0.426, 0.294, 0.537, 0.637, 0.648, 0.756, 0.640, 0.668, 0.738, 0.662, 0.844, 0.753, 0.835]
+
+  "George Bush 9_11":
+    faces:
+      - [0.507, 0.203, 0.358, 0.805, 0.555, 0.504, 0.716, 0.519, 0.587, 0.652, 0.559, 0.797, 0.695, 0.808]
+
+  "Grandma Finds The Internet":
+    faces:
+      - [0.453, 0.216, 0.276, 0.482, 0.600, 0.407, 0.690, 0.420, 0.673, 0.501, 0.588, 0.572, 0.660, 0.584]
+
+  "Hide the Pain Harold":
+    faces:
+      - [0.603, 0.062, 0.130, 0.124, 0.616, 0.117, 0.664, 0.116, 0.624, 0.143, 0.626, 0.159, 0.664, 0.160]
+      - [0.611, 0.548, 0.142, 0.135, 0.636, 0.605, 0.698, 0.605, 0.659, 0.633, 0.645, 0.649, 0.694, 0.650]
+
+  "I'm The Captain Now":
+    usage: 'The pirate takes over: "Look at me." then "I''m the captain now." Something small seizes control.'
+    boxes:
+      - [0.03, 0.02, 0.94, 0.26, white, top, "the setup, e.g. 'Look at me' (who or what takes over)"]
+      - [0.03, 0.72, 0.94, 0.26, white, bottom, "the takeover: 'I'm the <X> now'"]
+    faces:
+      - [0.556, 0.399, 0.202, 0.415, 0.595, 0.556, 0.673, 0.572, 0.603, 0.637, 0.594, 0.707, 0.653, 0.717]
+
+  "Laughing Leo":
+    faces:
+      - [0.295, 0.127, 0.268, 0.348, 0.346, 0.267, 0.459, 0.256, 0.393, 0.337, 0.368, 0.388, 0.465, 0.381]
+
+  "Leonardo Dicaprio Cheers":
+    faces:
+      - [0.385, 0.145, 0.270, 0.539, 0.469, 0.405, 0.597, 0.381, 0.552, 0.498, 0.490, 0.555, 0.608, 0.536]
+
+  "One Does Not Simply":
+    faces:
+      - [0.335, 0.158, 0.303, 0.597, 0.389, 0.443, 0.513, 0.374, 0.457, 0.545, 0.444, 0.612, 0.566, 0.553]
+
+  "Oprah You Get A":
+    faces:
+      - [0.464, 0.237, 0.109, 0.197, 0.486, 0.302, 0.536, 0.300, 0.510, 0.337, 0.495, 0.372, 0.538, 0.374]
+
+  "Pawn Stars Best I Can Do":
+    characters:   # first one = default face target
+      owner: "the shop owner making the lowball offer"
+      sidekick: "the guy standing behind him"
+    faces:
+      - [0.245, 0.119, 0.130, 0.288, 0.323, 0.228, 0.360, 0.228, 0.360, 0.287, 0.317, 0.331, 0.344, 0.337, owner]
+      - [0.718, 0.154, 0.101, 0.225, 0.745, 0.234, 0.791, 0.234, 0.768, 0.283, 0.749, 0.314, 0.787, 0.314, sidekick]
+
+  "Roll Safe Think About It":
+    faces:
+      - [0.196, 0.217, 0.231, 0.587, 0.308, 0.456, 0.402, 0.424, 0.404, 0.548, 0.338, 0.665, 0.416, 0.634]
+
+  "Star Wars Yoda":
+    faces:
+      - [0.302, 0.141, 0.382, 0.349, 0.454, 0.277, 0.604, 0.260, 0.572, 0.338, 0.489, 0.400, 0.614, 0.387]
+
+  "Third World Skeptical Kid":
+    faces:
+      - [0.666, 0.190, 0.291, 0.334, 0.780, 0.322, 0.905, 0.348, 0.845, 0.419, 0.759, 0.441, 0.861, 0.466]
+
+  "Y'all Got Any More Of That":
+    faces:
+      - [0.320, 0.180, 0.284, 0.445, 0.368, 0.344, 0.502, 0.334, 0.427, 0.427, 0.393, 0.510, 0.507, 0.500]
+
+  "You Guys are Getting Paid":
+    faces:
+      - [0.379, 0.129, 0.226, 0.439, 0.447, 0.292, 0.551, 0.302, 0.503, 0.389, 0.443, 0.446, 0.542, 0.456]
+
+  "You know, I'm something of a scientist myself":
+    faces:
+      - [0.459, 0.169, 0.199, 0.522, 0.503, 0.383, 0.582, 0.355, 0.544, 0.470, 0.527, 0.563, 0.595, 0.540]
+
+  # ---- Harvested from memegen.link (copied to E:/photos/meme on 2026-11-24) -------------------------------------
+  # Box positions come from memegen's own template configs (github.com/jacebrowning/memegen, templates/<id>/config.yml).
+  # Text colour is black where the box sits on a plain light area. Multi-panel hints carry memegen's example caption.
+
+  "10 Guy":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Afraid to Ask Andy":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Agnes Harkness Winking":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "All Your Base Are Belong to Us":
+    boxes:
+      - [0.025, 0.700, 0.950, 0.265, white, middle, "the caption, e.g. \"all your base are belong to us\""]
+
+  "Almost Politically Correct Redneck":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "American Chopper Argument":
+    boxes:
+      - [0.015, 0.200, 0.480, 0.130, white, middle, "text 1 of 6, e.g. \"Let's expand safety nets\""]
+      - [0.495, 0.200, 0.490, 0.130, white, middle, "text 2 of 6, e.g. \"Socialism never works!\""]
+      - [0.015, 0.535, 0.480, 0.130, white, middle, "text 3 of 6, e.g. \"Scandinavia is socialist and they're doing great!\""]
+      - [0.495, 0.525, 0.490, 0.140, white, middle, "text 4 of 6, e.g. \"They're not socialist. They're capitalist with strong welfare policies!\""]
+      - [0.015, 0.870, 0.485, 0.120, white, middle, "text 5 of 6, e.g. \"Then let's adopt those!\""]
+      - [0.500, 0.870, 0.485, 0.120, white, middle, "text 6 of 6, e.g. \"No that's socialism!!\""]
+
+  "An Older Code Sir, But It Checks Out":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Anakin and Padme Change the World For the Better":
+    boxes:
+      - [0.090, 0.010, 0.250, 0.100, white, middle, "text 1 of 5, e.g. \"Senior Developer\""]
+      - [0.650, 0.010, 0.250, 0.100, white, middle, "text 2 of 5, e.g. \"Junior Developer\""]
+      - [0.015, 0.399, 0.484, 0.100, white, middle, "text 3 of 5, e.g. \"Put it in the backlog.\""]
+      - [0.502, 0.399, 0.483, 0.100, white, middle, "text 4 of 5, e.g. \"So we can fix it later, right?\""]
+      - [0.502, 0.900, 0.483, 0.090, white, middle, "text 5 of 5, e.g. \"So we can fix it later, right?\""]
+
+  "And It's Gone":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "And Then I Said":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Are You Two Friends?":
+    boxes:
+      - [0.257, 0.212, 0.600, 0.200, white, middle, "text 1 of 3, e.g. \"Progressives\""]
+      - [0.062, 0.663, 0.400, 0.200, white, middle, "text 2 of 3, e.g. \"Republicans\""]
+      - [0.460, 0.690, 0.450, 0.200, white, middle, "text 3 of 3, e.g. \"Libertarians\""]
+
+  "At Least You Tried":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Awkward Moment Seal":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Baby Insanity Wolf":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Baby, You've Got a Stew Going":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Bongo Cat":
+    boxes:
+      - [0.015, 0.010, 0.465, 0.490, black, middle, "text 1 of 2, e.g. \"Any sound when you're trying to sleep\""]
+      - [0.015, 0.500, 0.465, 0.490, black, middle, "text 2 of 2, e.g. \"Max volume alarm when you have to wake up\""]
+
+  "But It's Honest Work":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "But That's None of My Business":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Butthurt Dweller":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Captain America Elevator Fight Dad Joke":
+    boxes:
+      - [0.015, 0.230, 0.970, 0.100, white, middle, "text 1 of 3, e.g. \"Have you ever eaten a clock?\""]
+      - [0.015, 0.570, 0.385, 0.080, white, middle, "text 2 of 3, e.g. \"No, why?\""]
+      - [0.500, 0.560, 0.485, 0.100, white, middle, "text 3 of 3, e.g. \"It's time consuming.\""]
+
+  "Captain Hindsight":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Cheems":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Comic Book Guy":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Condescending Wonka":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Confession Bear":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Confused Gandalf":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Conspiracy Keanu":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Crying on Floor":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, black, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, black, bottom, "bottom text"]
+
+  "Dating Site Murderer":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Do It Live!":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Do You Want Ants?":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Doge":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Donald Trump":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Drowning High Five":
+    boxes:
+      - [0.030, 0.330, 0.460, 0.150, white, middle, "text 1 of 3, e.g. \"Me Asking for Help\""]
+      - [0.510, 0.140, 0.200, 0.200, black, middle, "text 2 of 3, e.g. \"Online Commenter\""]
+      - [0.030, 0.820, 0.460, 0.150, white, middle, "text 3 of 3, e.g. \"I'm having that problem too.\""]
+
+  "Drunk Baby":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Elmo Choosing Cocaine":
+    boxes:
+      - [0.015, 0.240, 0.285, 0.250, white, middle, "text 1 of 5, e.g. \"Historical Accuracy\""]
+      - [0.350, 0.210, 0.300, 0.170, white, middle, "text 2 of 5, e.g. \"History Channel\""]
+      - [0.590, 0.390, 0.300, 0.100, white, middle, "text 3 of 5, e.g. \"Aliens\""]
+      - [0.015, 0.690, 0.285, 0.250, white, middle, "text 4 of 5, e.g. \"Historical Accuracy\""]
+      - [0.590, 0.870, 0.300, 0.100, white, middle, "text 5 of 5, e.g. \"Aliens\""]
+
+  "Ermahgerd":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Everything the Light Touches is Our Kingdom":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Expectation vs. Reality":
+    boxes:
+      - [0.015, 0.010, 0.465, 0.490, black, middle, "text 1 of 2, e.g. \"Clicking the 'X' on a mobile ad\""]
+      - [0.015, 0.500, 0.465, 0.490, black, middle, "text 2 of 2, e.g. \"The 'X' is part of the ad\""]
+
+  "Facepalm":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Fake Spirit Halloween Costume":
+    boxes:
+      - [0.100, 0.280, 0.350, 0.160, white, middle, "text 1 of 5, e.g. \"My Dad\""]
+      - [0.100, 0.450, 0.340, 0.050, white, middle, "text 2 of 5, e.g. \"Includes:\""]
+      - [0.100, 0.510, 0.340, 0.080, white, middle, "text 3 of 5, e.g. \"- Nothing\""]
+      - [0.100, 0.590, 0.340, 0.080, white, middle, "text 4 of 5, e.g. \"- Nothing\""]
+      - [0.100, 0.670, 0.340, 0.080, white, middle, "text 5 of 5, e.g. \"- Nothing\""]
+
+  "Feels Bad Man":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Feels Good":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, black, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, black, bottom, "bottom text"]
+
+  "First Try!":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "First World Problems":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Forever Alone":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Foul Bachelor Frog":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Fuck Me, Right?":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Genie Lamp":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Genie Rules":
+    boxes:
+      - [0.015, 0.480, 0.435, 0.150, black, middle, "the caption, e.g. \"I want to divide by zero\""]
+
+  "Get Better Material":
+    boxes:
+      - [0.325, 0.020, 0.150, 0.150, white, middle, "text 1 of 2, e.g. \"Caw Caw Caw\""]
+      - [0.634, 0.750, 0.300, 0.200, black, middle, "text 2 of 2, e.g. \"Caw Caw Caw Caw Caw Caw\""]
+
+  "Good Guy Greg":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Grumpy Cat":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Guy Hammering Nails Into Sand":
+    boxes:
+      - [0.039, 0.297, 0.350, 0.100, white, middle, "text 1 of 3, e.g. \"Humanity\""]
+      - [0.407, 0.839, 0.350, 0.100, white, middle, "text 2 of 3, e.g. \"Language\""]
+      - [0.525, 0.279, 0.450, 0.200, white, middle, "text 3 of 3, e.g. \"The inherently indescribably nature of the universe\""]
+
+  "Hipster Barista":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "I Can Has Cheezburger?":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "I Feel Like I'm Taking Crazy Pills":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "I Guarantee It":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "I Have No Idea What I'm Doing":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "I Immediately Regret This Decision!":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "I Made This":
+    boxes:
+      - [0.015, 0.280, 0.245, 0.100, black, middle, "text 1 of 5, e.g. \"The Internet\""]
+      - [0.740, 0.280, 0.245, 0.100, black, middle, "text 2 of 5, e.g. \"Everyone\""]
+      - [0.270, 0.040, 0.150, 0.100, white, middle, "text 3 of 5, e.g. \"I made this.\""]
+      - [0.525, 0.030, 0.150, 0.100, black, middle, "text 4 of 5, e.g. \"You made this?\""]
+      - [0.345, 0.725, 0.150, 0.100, black, middle, "text 5 of 5, e.g. \"I made this.\""]
+
+  "I Should Buy a Boat Cat":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "I Should Not Have Said That":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "I Would Be So Happy":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "I'm Going to Build My Own Theme Park":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Inigo Montoya":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Insanity Wolf":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "It's A Trap!":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, black, bottom, "bottom text"]
+
+  "It's Happening":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "It's Simple, Kill the Batman":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Jim Halpert Pointing to Whiteboard":
+    boxes:
+      - [0.029, 0.051, 0.610, 0.220, black, middle, "text 1 of 2, e.g. \"It's OK to like trashy shows and movies\""]
+      - [0.020, 0.560, 0.550, 0.350, black, middle, "text 2 of 2, e.g. \"If it makes you happy then it's not a waste of time\""]
+
+  "Jony Ive Redesigns Things":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, black, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Joseph Ducreux":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Karate Kyle":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.140, white, middle, "text 1 of 2, e.g. \"they broke my pencils\""]
+      - [0.015, 0.850, 0.970, 0.140, white, middle, "text 2 of 2, e.g. \"i broke their neck\""]
+
+  "Khaby Lame Shrug":
+    boxes:
+      - [0.020, 0.020, 0.450, 0.470, black, middle, "text 1 of 2, e.g. \"Bad mood?\""]
+      - [0.020, 0.510, 0.450, 0.470, black, middle, "text 2 of 2, e.g. \"Laugh at memes\""]
+
+  "Kombucha Girl":
+    boxes:
+      - [0.015, 0.010, 0.485, 0.290, white, middle, "text 1 of 2, e.g. \"Trying a thing.\""]
+      - [0.512, 0.010, 0.473, 0.290, white, middle, "text 2 of 2, e.g. \"Trying a thing again.\""]
+
+  "Kramer, What's Going On In There?":
+    boxes:
+      - [0.300, 0.120, 0.685, 0.200, white, middle, "text 1 of 2, e.g. \"Kramer, what's going on in there?\""]
+      - [0.015, 0.800, 0.585, 0.190, white, middle, "text 2 of 2, e.g. \"It's a Chicken Roaster sign, right across from my window.\""]
+
+  "Laughing Lizard":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Laundry Room Viking":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Leo Strutting":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Life... Finds a Way":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Matrix Morpheus":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Member Berries":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Men in Black":
+    boxes:
+      - [0.015, 0.375, 0.970, 0.125, white, middle, "text 1 of 2, e.g. \"Just because you see a Black man driving in a nice car... does not mean it's stolen.\""]
+      - [0.015, 0.875, 0.970, 0.115, white, middle, "text 2 of 2, e.g. \"...I stole that one, but not 'cause I'm Black!\""]
+
+  "Michael Scott No God No":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Milk Was a Bad Choice":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Mini Keanu Reeves":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Minor Mistake Marvin":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "No Soup for You":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "No Take, Only Throw":
+    boxes:
+      - [0.061, 0.119, 0.210, 0.150, black, middle, "text 1 of 3, e.g. \"Pls throw??\""]
+      - [0.460, 0.150, 0.180, 0.150, black, middle, "text 2 of 3, e.g. \"NO TAKE!!\""]
+      - [0.700, 0.135, 0.250, 0.150, black, middle, "text 3 of 3, e.g. \"ONLY THROW\""]
+
+  "Nothing To Do Here":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, black, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, black, bottom, "bottom text"]
+
+  "Office Space Milton":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Oh, I'm Sorry, I Thought This Was America":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Oh, Is That What We're Going to Do Today?":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Overly Attached Girlfriend":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Patrick Star's Wallet":
+    boxes:
+      - [0.015, 0.170, 0.485, 0.080, white, middle, "text 1 of 8, e.g. \"Aren't you Patrick Star?\""]
+      - [0.500, 0.180, 0.485, 0.070, white, middle, "text 2 of 8, e.g. \"Yup.\""]
+      - [0.015, 0.400, 0.485, 0.100, white, middle, "text 3 of 8, e.g. \"And this is your ID?\""]
+      - [0.500, 0.430, 0.485, 0.070, white, middle, "text 4 of 8, e.g. \"Yup.\""]
+      - [0.015, 0.650, 0.485, 0.100, white, middle, "text 5 of 8, e.g. \"I found the ID in this wallet so it must be yours.\""]
+      - [0.500, 0.670, 0.485, 0.080, white, middle, "text 6 of 8, e.g. \"That makes sense to me.\""]
+      - [0.015, 0.920, 0.485, 0.070, white, middle, "text 7 of 8, e.g. \"Then take it!\""]
+      - [0.500, 0.920, 0.485, 0.070, white, middle, "text 8 of 8, e.g. \"It's not my wallet.\""]
+
+  "Pepperidge Farm Remembers":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Perfection":
+    boxes:
+      - [0.015, 0.010, 0.485, 0.323, black, middle, "text 1 of 6, e.g. \"Sebastian Shaw\""]
+      - [0.500, 0.225, 0.485, 0.100, white, middle, "text 2 of 6, e.g. \"I prefer the real Darth Vader.\""]
+      - [0.015, 0.333, 0.485, 0.333, black, middle, "text 3 of 6, e.g. \"Hayden Christensen\""]
+      - [0.500, 0.560, 0.485, 0.100, white, middle, "text 4 of 6, e.g. \"I said, the real Darth Vader.\""]
+      - [0.015, 0.666, 0.485, 0.324, black, middle, "text 5 of 6, e.g. \"Jake Lloyd\""]
+      - [0.500, 0.895, 0.485, 0.095, white, middle, "text 6 of 6, e.g. \"Perfection.\""]
+
+  "Persian Cat Room Guardian":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Peter Parker's Glasses":
+    boxes:
+      - [0.500, 0.010, 0.485, 0.480, black, middle, "text 1 of 2, e.g. \"Virginity is cool, stay pure\""]
+      - [0.500, 0.510, 0.485, 0.480, black, middle, "text 2 of 2, e.g. \"I am utterly incapable of getting laid\""]
+
+  "Philosoraptor":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Phoebe Teaching Joey":
+    boxes:
+      - [0.015, 0.175, 0.485, 0.050, white, middle, "text 1 of 8, e.g. \"Cast it\""]
+      - [0.500, 0.175, 0.485, 0.050, white, middle, "text 2 of 8, e.g. \"Cast it\""]
+      - [0.015, 0.425, 0.485, 0.050, white, middle, "text 3 of 8, e.g. \"into\""]
+      - [0.500, 0.425, 0.485, 0.050, white, middle, "text 4 of 8, e.g. \"into\""]
+      - [0.015, 0.675, 0.485, 0.050, white, middle, "text 5 of 8, e.g. \"the fire\""]
+      - [0.500, 0.675, 0.485, 0.050, white, middle, "text 6 of 8, e.g. \"the fire\""]
+      - [0.015, 0.925, 0.485, 0.050, white, middle, "text 7 of 8, e.g. \"Cast it into the fire.\""]
+      - [0.500, 0.925, 0.485, 0.050, white, middle, "text 8 of 8, e.g. \"Keep the Ring of Power!\""]
+
+  "Principal Skinner":
+    boxes:
+      - [0.015, 0.300, 0.970, 0.200, white, middle, "text 1 of 2, e.g. \"Am I so out of touch?\""]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Probably Not a Good Idea":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Push it somewhere else Patrick":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.140, white, middle, "text 1 of 2, e.g. \"why don't we take all the memes\""]
+      - [0.015, 0.850, 0.970, 0.140, white, middle, "text 2 of 2, e.g. \"and put them on memegen\""]
+
+  "Sad Barack Obama":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Sad Bill Clinton":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Sad George Bush":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Sad Joe Biden":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Sad John Boehner":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Salt Bae":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Sarcastic Bear":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Schrute Facts":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Scumbag Brain":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, black, bottom, "bottom text"]
+
+  "Scumbag Steve":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Seal of Approval":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Sealed Fate":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "See? Nobody Cares":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Shut Up and Take My Money!":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Skeptical Snake":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "So Hot Right Now":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "So I Got That Goin' For Me, Which is Nice":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Soccer Celebration In A Bar":
+    boxes:
+      - [0.150, 0.057, 0.380, 0.300, white, middle, "the caption, e.g. \"Push to CI\""]
+
+  "Socially Awesome Awkward Penguin":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Socially Awesome Penguin":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Socially Awkward Penguin":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Stonks":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Stop It Patrick You're Scaring Him":
+    boxes:
+      - [0.015, 0.010, 0.485, 0.050, white, middle, "text 1 of 6, e.g. \"I'm claustrophobic.\""]
+      - [0.500, 0.010, 0.485, 0.065, white, middle, "text 2 of 6, e.g. \"What does \"claustrophobic\" mean?\""]
+      - [0.180, 0.335, 0.320, 0.180, white, middle, "text 3 of 6, e.g. \"It means he's afraid of Santa Claus.\""]
+      - [0.500, 0.335, 0.485, 0.070, white, middle, "text 4 of 6, e.g. \"No, it doesn't.\""]
+      - [0.015, 0.670, 0.485, 0.075, white, middle, "text 5 of 6, e.g. \"HO-HO-HO\""]
+      - [0.500, 0.670, 0.485, 0.075, white, middle, "text 6 of 6, e.g. \"Stop it, Patrick, you're scaring him!\""]
+
+  "Stop It, Get Some Help":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Stop Trying to Make Fetch Happen":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Success Kid":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Sudden Clarity Clarence":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Super Cool Ski Instructor":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Sweet Brown":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "That Would Be Great":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "The Most Interesting Man in the World":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "The Rent Is Too Damn High":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "The Worst Day Of Your Life So Far":
+    boxes:
+      - [0.015, 0.400, 0.970, 0.100, white, middle, "text 1 of 2, e.g. \"This is the worst day of my life.\""]
+      - [0.015, 0.900, 0.970, 0.090, white, middle, "text 2 of 2, e.g. \"This is the worst day of your life so far.\""]
+
+  "This is Bull, Shark":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, black, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "This is Sparta!":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Too Confusing, Too Extreme":
+    boxes:
+      - [0.155, 0.340, 0.640, 0.310, white, middle, "the caption, e.g. \"Zipper Merging\""]
+
+  "Ugandan Knuckles":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Unpopular opinion puffin":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Vince McMahon Reaction":
+    boxes:
+      - [0.015, 0.010, 0.480, 0.305, black, middle, "text 1 of 3, e.g. \"2-Day Delivery\""]
+      - [0.015, 0.320, 0.480, 0.357, black, middle, "text 2 of 3, e.g. \"Overnight Shipping\""]
+      - [0.015, 0.680, 0.480, 0.310, black, middle, "text 3 of 3, e.g. \"Shopping at the Store\""]
+
+  "We Don't Do That Here":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.140, white, middle, "text 1 of 2, e.g. \"when someone calls your phone without warning\""]
+      - [0.100, 0.850, 0.800, 0.140, white, middle, "text 2 of 2, e.g. \"We don't do that here.\""]
+
+  "We Have Food at Home":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.092, black, middle, "text 1 of 3, e.g. \"Me: Can we stop and get food?\""]
+      - [0.015, 0.100, 0.970, 0.100, black, middle, "text 2 of 3, e.g. \"Mom: We have food at home.\""]
+      - [0.015, 0.200, 0.970, 0.100, black, middle, "text 3 of 3, e.g. \"Food at home:\""]
+
+  "What a Country":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "What Are Ya Gonna Do?":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "What Color Do You Want Your Dragon":
+    boxes:
+      - [0.220, 0.505, 0.250, 0.119, black, middle, "the caption, e.g. \"OK I want a boyfriend\""]
+
+  "What is this, a Center for Ants?!":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "What the Hell is This?":
+    boxes:
+      - [0.790, 0.300, 0.195, 0.100, white, middle, "text 1 of 4, e.g. \"Street\""]
+      - [0.680, 0.700, 0.200, 0.100, white, middle, "text 2 of 4, e.g. \"Road\""]
+      - [0.060, 0.680, 0.200, 0.100, white, middle, "text 3 of 4, e.g. \"Stroad\""]
+      - [0.015, 0.900, 0.970, 0.090, white, middle, "text 4 of 4, e.g. \"What the hell is this?\""]
+
+  "What Year Is It?":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "What's in the box!?":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Why Not Both?":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.750, 0.970, 0.200, white, middle, "text 2 of 2, e.g. \"why not both?\""]
+
+  "Why Shouldn't I Keep It":
+    boxes:
+      - [0.015, 0.400, 0.970, 0.100, white, middle, "text 1 of 2, e.g. \"After all... why not?\""]
+      - [0.015, 0.900, 0.970, 0.090, white, middle, "text 2 of 2, e.g. \"Why shouldn't I keep it?\""]
+
+  "Will Smith Slapping Chris Rock":
+    boxes:
+      - [0.196, 0.286, 0.350, 0.300, white, middle, "text 1 of 2, e.g. \"Me Trying to Enjoy the Weekend\""]
+      - [0.500, 0.700, 0.350, 0.290, white, middle, "text 2 of 2, e.g. \"Monday\""]
+
+  "Winter is coming":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Woman Holding Dog's Mouth":
+    boxes:
+      - [0.015, 0.150, 0.385, 0.200, white, middle, "text 1 of 3, e.g. \"Sales Team presenting the solution in PowerPoint\""]
+      - [0.600, 0.200, 0.385, 0.200, white, middle, "text 2 of 3, e.g. \"Excited Customer\""]
+      - [0.100, 0.600, 0.400, 0.200, white, middle, "text 3 of 3, e.g. \"Engineering Team knowing the solution is not technically possible\""]
+
+  "X all the Y":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, black, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Xzibit Yo Dawg":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "Y U NO Guy":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "You Know What Really Grinds My Gears?":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "You Should Feel Bad":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "You Sit on a Throne of Lies":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]
+
+  "You Were the Chosen One!":
+    boxes:
+      - [0.015, 0.010, 0.970, 0.190, white, top, "top text"]
+      - [0.015, 0.800, 0.970, 0.190, white, bottom, "bottom text"]

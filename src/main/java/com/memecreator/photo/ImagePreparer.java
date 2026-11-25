@@ -113,6 +113,11 @@ public class ImagePreparer {
         return out;
     }
 
+    /** JPEG bytes at good quality; re-encoding also drops any EXIF metadata of the original upload. */
+    public static byte[] toJpeg(BufferedImage img) {
+        return jpeg(img, 0.92f);
+    }
+
     static byte[] jpeg(BufferedImage img, float quality) {
         ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();

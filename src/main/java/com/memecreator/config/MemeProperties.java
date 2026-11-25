@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
+import java.time.Duration;
 import java.util.List;
 
 @Validated
@@ -19,6 +20,10 @@ public record MemeProperties(
         @DefaultValue({"Impact", "Anton", "Arial Black", "Arial"}) List<String> fonts,
         @DefaultValue("0.92") float jpegQuality,
         /** Where captions go on each template; a Spring resource location (classpath: or file:). */
-        @DefaultValue("classpath:template-layouts.yml") String layoutsFile
+        @DefaultValue("classpath:template-layouts.yml") String layoutsFile,
+        /** Private storage for users' face photos; never served over HTTP, never used as templates. */
+        @DefaultValue("private") String privateDir,
+        /** How long face photos (and the memes made from them) are kept before automatic deletion. */
+        @DefaultValue("90d") Duration faceRetention
 ) {
 }

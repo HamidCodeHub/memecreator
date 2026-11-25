@@ -6,9 +6,9 @@ ai-gateway:
   api-key: ${GROQ_API_KEY}
   model: openai/gpt-oss-120b
   temperature: 1.0          # gpt-oss is tuned for temperature 1.0; it also helps the jokes vary
-  max-tokens: 2000          # reasoning + answer share this budget
+  max-tokens: 1536          # reasoning + answer share this budget; free tier: prompt + max_tokens <= 8,000/min
+  vision-max-tokens: 1536
   reasoning-effort: low     # low = fast; medium/high rarely makes captions funnier
-  json-mode: true
   vision-model: qwen/qwen3.8-27b
   image-format: openai      # Groq expects {"type":"image_url","image_url":{"url":...}}
   read-timeout: 60s

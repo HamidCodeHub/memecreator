@@ -79,7 +79,7 @@ public class MemeRenderer {
     }
 
     public void render(Path template, List<TextBox> boxes, List<String> texts, Path target) throws IOException {
-        writeJpeg(render(read(template), boxes, texts), target);
+        writeJpeg(render(readImage(template), boxes, texts), target);
     }
 
     /**
@@ -87,8 +87,54 @@ public class MemeRenderer {
      * upper-cased ("me when ..."). The picture itself is not covered.
      */
     public BufferedImage renderCaptionBar(BufferedImage source, String text) {
+        return renderBars(source, text, null);
+    }
+
+    /**
+     * White caption bars like {@link #renderCaptionBar}, above and/or below the picture; a null or blank text means
+     * no bar on that side. The picture itself is not covered.
+     */
+    public BufferedImage renderBars(BufferedImage source, String topText, String bottomText) {
         int w = source.getWidth();
+        BarText top = barText(topText, w);
+        BarText bottom = barText(bottomText, w);
+        if (top == null && bottom == null) {
+            return source;
+        }
+        int topH = top == null ? 0 : top.height();
+        int bottomH = bottom == null ? 0 : bottom.height();
+        BufferedImage out = new BufferedImage(w, topH + source.getHeight() + bottomH, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = graphics(out);
+        try {
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, w, out.getHeight());
+            g.drawImage(source, 0, topH, null);
+            if (top != null) {
+                drawBarText(g, top, 0);
+            }
+            if (bottom != null) {
+                drawBarText(g, bottom, topH + source.getHeight());
+            }
+        } finally {
+            g.dispose();
+        }
+        return out;
+    }
+
+    /** Height in pixels of the white bar {@link #renderBars} adds for this text on a picture this wide (0: none). */
+    public int barHeight(String text, int width) {
+        BarText b = barText(text, width);
+        return b == null ? 0 : b.height();
+    }
+
+    private record BarText(Font font, int ascent, int lineHeight, int pad, List<String> lines, int height) {
+    }
+
+    private BarText barText(String text, int w) {
         String caption = text == null ? "" : text.strip();
+        if (caption.isEmpty()) {
+            return null;
+        }
         int pad = Math.max(8, Math.round(w * 0.04f));
         int availW = w - 2 * pad;
 
@@ -104,7 +150,7 @@ public class MemeRenderer {
             while (true) {
                 font = family.deriveFont((float) size);
                 fm = pg.getFontMetrics(font);
-                lines = caption.isEmpty() ? List.of() : wrap(caption, fm, availW);
+                lines = wrap(caption, fm, availW);
                 if ((lines.size() <= 4 && longestWord(caption, fm) <= availW) || size <= MIN_FONT_SIZE + 4) {
                     break;
                 }
@@ -113,26 +159,38 @@ public class MemeRenderer {
         } finally {
             pg.dispose();
         }
-
         int lh = Math.round((fm.getAscent() + fm.getDescent()) * 1.15f);
-        int barH = lines.isEmpty() ? 0 : lines.size() * lh + 2 * pad - (lh - fm.getAscent() - fm.getDescent());
-        BufferedImage out = new BufferedImage(w, barH + source.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = graphics(out);
+        int barH = lines.size() * lh + 2 * pad - (lh - fm.getAscent() - fm.getDescent());
+        return new BarText(font, fm.getAscent(), lh, pad, lines, barH);
+    }
+
+    private static void drawBarText(Graphics2D g, BarText bar, int y) {
+        g.setColor(Color.BLACK);
+        int baseline = y + bar.pad() + bar.ascent();
+        for (String line : bar.lines()) {
+            TextLayout layout = new TextLayout(line, bar.font(), g.getFontRenderContext());
+            g.fill(layout.getOutline(AffineTransform.getTranslateInstance(bar.pad(), baseline)));
+            baseline += bar.lineHeight();
+        }
+    }
+
+    /**
+     * The font size {@link #render} would draw this text with in this box (upper-cased, as there); 0 for no text.
+     * Lets a caller check that a smaller box still gives readable text.
+     */
+    public int fontSizeFor(String text, TextBox box, int imgW, int imgH) {
+        String t = text == null ? "" : text.strip().toUpperCase(Locale.ROOT);
+        if (t.isEmpty()) {
+            return 0;
+        }
+        BufferedImage probe = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = graphics(probe);
         try {
-            g.setColor(Color.WHITE);
-            g.fillRect(0, 0, w, out.getHeight());
-            g.drawImage(source, 0, barH, null);
-            g.setColor(Color.BLACK);
-            int baseline = pad + fm.getAscent();
-            for (String line : lines) {
-                TextLayout layout = new TextLayout(line, font, g.getFontRenderContext());
-                g.fill(layout.getOutline(AffineTransform.getTranslateInstance(pad, baseline)));
-                baseline += lh;
-            }
+            Fit f = fit(g, t, toPixels(box, imgW, imgH), box.color() == TextBox.TextColor.WHITE, imgW, imgH);
+            return f == null ? 0 : f.size();
         } finally {
             g.dispose();
         }
-        return out;
     }
 
     /** Saves an image as JPEG with the configured quality. */
@@ -142,7 +200,12 @@ public class MemeRenderer {
 
     /** The template with every box outlined and labeled "#n hint", to check a layout. Returns PNG bytes. */
     public byte[] preview(Path template, List<TextBox> boxes) throws IOException {
-        BufferedImage out = copy(read(template));
+        return preview(template, boxes, List.of());
+    }
+
+    /** Preview with text boxes (red, "#n") and face slots (blue, "Fn"). Returns PNG bytes. */
+    public byte[] preview(Path template, List<TextBox> boxes, List<com.memecreator.template.FaceSlot> faces) throws IOException {
+        BufferedImage out = copy(readImage(template));
         Graphics2D g = graphics(out);
         try {
             float stroke = Math.max(2f, Math.min(out.getWidth(), out.getHeight()) / 200f);
@@ -157,6 +220,18 @@ public class MemeRenderer {
                 g.draw(r);
                 drawText(g, "#" + (i + 1) + " " + box.hint(), r, box.color(), box.valign(), out.getWidth(), out.getHeight());
             }
+            for (int i = 0; i < faces.size(); i++) {
+                com.memecreator.template.FaceSlot f = faces.get(i);
+                Rectangle r = new Rectangle((int) Math.round(f.x() * out.getWidth()), (int) Math.round(f.y() * out.getHeight()),
+                        (int) Math.round(f.width() * out.getWidth()), (int) Math.round(f.height() * out.getHeight()));
+                g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.25f));
+                g.setColor(new Color(40, 120, 255));
+                g.fill(r);
+                g.setComposite(AlphaComposite.SrcOver);
+                g.setStroke(new BasicStroke(stroke));
+                g.draw(r);
+                drawText(g, "F" + (i + 1) + (f.character() == null ? "" : " " + f.character()), r, TextBox.TextColor.WHITE, TextBox.VAlign.TOP, out.getWidth(), out.getHeight());
+            }
         } finally {
             g.dispose();
         }
@@ -165,15 +240,17 @@ public class MemeRenderer {
         return bytes.toByteArray();
     }
 
-    private void drawText(Graphics2D g, String text, Rectangle box, TextBox.TextColor color, TextBox.VAlign valign,
-                          int imgW, int imgH) {
+    /** The largest font size (down to the minimum) at which the text fits the box, wrapped into lines. */
+    private record Fit(Font font, FontMetrics fm, List<String> lines, float strokeW, int size, int pad) {
+    }
+
+    private Fit fit(Graphics2D g, String text, Rectangle box, boolean outlined, int imgW, int imgH) {
         Font family = fontFor(text);
-        boolean outlined = color == TextBox.TextColor.WHITE;
         int pad = Math.max(2, Math.round(Math.min(box.width, box.height) * 0.04f));
         int availW = box.width - 2 * pad;
         int availH = box.height - 2 * pad;
         if (availW < 4 || availH < 4) {
-            return;
+            return null;
         }
 
         int size = Math.max(MIN_FONT_SIZE, Math.min(availH, Math.max(imgW, imgH) / 7));
@@ -196,6 +273,21 @@ public class MemeRenderer {
             }
             size -= Math.max(1, size / 12);
         }
+        return new Fit(font, fm, lines, strokeW, size, pad);
+    }
+
+    private void drawText(Graphics2D g, String text, Rectangle box, TextBox.TextColor color, TextBox.VAlign valign,
+                          int imgW, int imgH) {
+        boolean outlined = color == TextBox.TextColor.WHITE;
+        Fit f = fit(g, text, box, outlined, imgW, imgH);
+        if (f == null) {
+            return;
+        }
+        Font font = f.font();
+        FontMetrics fm = f.fm();
+        List<String> lines = f.lines();
+        float strokeW = f.strokeW();
+        int pad = f.pad();
 
         int lh = lineHeight(fm);
         int blockH = lines.size() * lh;
@@ -274,14 +366,23 @@ public class MemeRenderer {
     }
 
     private static Rectangle toPixels(TextBox b, BufferedImage img) {
-        int x = (int) Math.round(b.x() * img.getWidth());
-        int y = (int) Math.round(b.y() * img.getHeight());
-        int w = (int) Math.round(b.width() * img.getWidth());
-        int h = (int) Math.round(b.height() * img.getHeight());
-        return new Rectangle(x, y, Math.min(w, img.getWidth() - x), Math.min(h, img.getHeight() - y));
+        return toPixels(b, img.getWidth(), img.getHeight());
     }
 
-    private static BufferedImage read(Path template) throws IOException {
+    private static Rectangle toPixels(TextBox b, int imgW, int imgH) {
+        int x = (int) Math.round(b.x() * imgW);
+        int y = (int) Math.round(b.y() * imgH);
+        int w = (int) Math.round(b.width() * imgW);
+        int h = (int) Math.round(b.height() * imgH);
+        return new Rectangle(x, y, Math.min(w, imgW - x), Math.min(h, imgH - y));
+    }
+
+    /** Reads a template image. */
+    public BufferedImage read(Path template) throws IOException {
+        return readImage(template);
+    }
+
+    private static BufferedImage readImage(Path template) throws IOException {
         BufferedImage src = ImageIO.read(template.toFile());
         if (src == null) {
             throw new IOException("Unsupported image format: " + template);

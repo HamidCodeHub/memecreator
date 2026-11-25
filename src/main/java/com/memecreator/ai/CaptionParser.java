@@ -9,7 +9,8 @@ import java.util.List;
 /**
  * Turns the model's reply into captions. Models sometimes wrap JSON in ```json fences
  * or add a sentence around it, so the outermost JSON object/array is cut out first.
- * Accepts {"texts": [...]} per meme, and the older {"top": .., "bottom": ..} shape.
+ * Accepts {"texts": [...]} per meme, and the older {"top": .., "bottom": ..} shape. An optional "face" names the
+ * character the user's face goes on (face memes only).
  */
 public final class CaptionParser {
 
@@ -22,8 +23,7 @@ public final class CaptionParser {
         try {
             root = mapper.readTree(json);
         } catch (Exception e) {
-            throw new AiGatewayException("AI reply was not valid JSON. Check that ai-gateway.model routes to a real "
-                    + "model (not a mock/echo provider). Reply started with: " + preview(reply), e);
+            throw new AiGatewayException("AI reply was not valid JSON. Reply started with: " + preview(reply), e);
         }
 
         JsonNode items = root.isArray() ? root : root.path("memes");
@@ -33,7 +33,7 @@ public final class CaptionParser {
 
         List<MemeCaption> captions = new ArrayList<>();
         for (JsonNode item : items) {
-            MemeCaption c = new MemeCaption(text(item, "template", "name"), texts(item));
+            MemeCaption c = new MemeCaption(text(item, "template", "name"), texts(item), text(item, "face", "character"));
             if (c.hasText()) {
                 captions.add(c);
             }
@@ -58,7 +58,16 @@ public final class CaptionParser {
             return "";
         }
         // some reasoning models (e.g. Qwen) put their thinking in <think>...</think> before the answer
-        reply = reply.replaceAll("(?s)<think>.*?</think>", "");
+        reply = reply.replaceAll("(?s)<think>.*?</think>", "").strip();
+        // ```json ... ``` fences
+        if (reply.startsWith("```")) {
+            int firstLineEnd = reply.indexOf('\n');
+            reply = firstLineEnd < 0 ? reply.substring(3) : reply.substring(firstLineEnd + 1);
+            if (reply.endsWith("```")) {
+                reply = reply.substring(0, reply.length() - 3);
+            }
+            reply = reply.strip();
+        }
         int obj = reply.indexOf('{');
         int arr = reply.indexOf('[');
         int start = obj < 0 ? arr : (arr < 0 ? obj : Math.min(obj, arr));
