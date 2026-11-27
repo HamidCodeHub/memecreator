@@ -1,0 +1,37 @@
+# Local test on your own PC (Docker Desktop on Windows/Mac, or Docker on Linux), published through a
+# Cloudflare Quick Tunnel: a temporary https://<random>.trycloudflare.com address, no Cloudflare account needed.
+# Start it with deploy/local-up.cmd (Windows) or:
+#   docker compose --env-file .env --env-file <aiproxy folder>/.env -f docker-compose.yml -f docker-compose.local.yml up -d --build
+# Differences from the server setup:
+#   - data lives in Docker volumes (memecreator-data, postgres-data) instead of /data/...
+#   - templates come straight from your folders (MEME_TEMPLATES_HOST, MEME_STORAGE_HOST in deploy/.env)
+#   - the site is also on http://localhost:8088
+#   - Google/Facebook sign-in can't work on the random tunnel address; use email + password
+#     (the confirmation link is printed in: docker compose logs memecreator)
+services:
+  postgres:
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  aiproxy:
+    build: ${AIPROXY_DIR:-../../aiproxy}
+    environment:
+      GROQ_ENABLED: ${GROQ_ENABLED:-false}   # no Groq key locally: the auto/* models just use Gemini
+
+  memecreator:
+    volumes:
+      - memecreator-data:/data
+      - ${MEME_TEMPLATES_HOST:?set MEME_TEMPLATES_HOST in deploy/.env}:/data/templates
+      - ${MEME_STORAGE_HOST:?set MEME_STORAGE_HOST in deploy/.env}:/data/meme-storage
+
+  web:
+    ports:
+      - "127.0.0.1:8088:80"
+
+  cloudflared:
+    command: tunnel --no-autoupdate --url http://web:80
+    environment: !reset {}
+
+volumes:
+  postgres-data:
+  memecreator-data:
