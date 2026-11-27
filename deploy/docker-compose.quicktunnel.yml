@@ -1,0 +1,6 @@
+# Quick Tunnel: used by local-up.cmd only while CLOUDFLARE_TUNNEL_TOKEN in deploy/.env is empty.
+# Publishes the site on a temporary https://<random>.trycloudflare.com address.
+services:
+  cloudflared:
+    command: tunnel --no-autoupdate --url http://web:80
+    environment: !reset {}
