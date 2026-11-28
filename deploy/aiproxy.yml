@@ -7,7 +7,7 @@ aiproxy:
   virtual-models:
     - name: auto/caption
       description: Meme captions (JSON output)
-      attempt-timeout: 15s
+      attempt-timeout: 45s     # Gemini can take 20-40 s on a caption prompt; Groq (if configured) is the fallback
       unavailable-cooldown: 30s
       candidates:
         - model: gemini/${GEMINI_MODEL:gemini-3.8-flash}
@@ -15,7 +15,7 @@ aiproxy:
           max-tokens: 2048     # Groq free tier: input + max_tokens must stay under 8,000 tokens per minute
     - name: auto/vision
       description: Photo memes (image input)
-      attempt-timeout: 20s
+      attempt-timeout: 60s     # image input takes longer
       unavailable-cooldown: 30s
       candidates:
         - model: gemini/${GEMINI_MODEL:gemini-3.8-flash}

@@ -18,7 +18,7 @@ services:
   aiproxy:
     build: ${AIPROXY_DIR:-../../aiproxy}
     environment:
-      GROQ_ENABLED: ${GROQ_ENABLED:-false}   # no Groq key locally: the auto/* models just use Gemini
+      GROQ_ENABLED: ${GROQ_ENABLED:-false}   # set GROQ_ENABLED=true + GROQ_API_KEY in deploy/.env to get the Groq fallback
 
   memecreator:
     volumes:
